@@ -1,0 +1,65 @@
+<template name="finalizePlan">
+  <div class="row">
+    <div class="small-12 medium-10 large-10 small-centered columns">
+      <div class="header panel">
+        <div class="center-align">
+          <h4>Vote on where you are your friends are going out tonight</h4>
+        </div>
+
+        <div class="row">
+          <div class="col s4">
+            <div class="center promo promo-example">
+              <i class="center material-icons circle">my_location</i>
+              <p class="promo-caption">Find Your Location</p>
+              <p class="light center">Allow Night Out to access your current location by hitting 'Allow'.</p>
+            </div>
+          </div>
+          <div class="col s4 center-align">
+            <div class="center promo promo-example">
+              <i class="material-icons circle">done</i>
+              <p class="promo-caption">Select Your Bars</p>
+              <p class="light center">Select the bars you want your friends to vote on from the list below.</p>
+            </div>
+          </div>
+          <div class="col s4 center-align">
+            <div class="center promo promo-example">
+              <i class="material-icons circle">thumb_up</i>
+              <p class="promo-caption">Enjoy Your Night Out</p>
+              <p class="light center">Have an awesome night with your friends, courtesy of Night Out.</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="small-12 medium-10 large-10 small-centered columns">
+
+        {{getAllFinalTargets}}
+          <div>
+
+          <div class="center">
+            <div class="map-container">
+              {{getLaunchID}}
+
+              {{#unless geolocationError}}
+                {{> googleMap name='map' options=mapOptions}}
+              {{else}}
+                Geolocation failed: {{geolocationError}}
+              {{/unless}}
+            </div>
+          </div>
+
+          </div>
+
+          <div>
+            {{> finalLaunchList }}
+          </div>
+
+    </div>
+  </div>
+</template>
+
+

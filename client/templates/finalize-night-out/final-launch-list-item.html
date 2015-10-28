@@ -1,0 +1,19 @@
+<template name="finalTargetListItem">
+  {{getPlanId}}
+
+  <li class="collection-item avatar">
+    <div class="alert-box secondary">
+      <img src={{icon}} alt="" class="circle">
+      <span class="title">{{name}}</span>
+      <p><p class='time' id='time'>ESTIMATING TIME</p>
+         <p class='money' id='money'>ESTIMATING COST OF RIDE</p>
+         <span class="badge">Votes: {{ votes }}</span>
+          Rating: {{ rating }}
+      </p>
+      <div type="radio" id='radio_{{placeId}}' class="styled-checkbox"></div>
+      <div class="ride_btn"><a class="ride_btn secondary-content"><button class= "btn waves-effect waves-light red" type="submit" style="right" name="action">Need a Ride? <i class=" material-icons ">directions_car</i></button></a></div>
+    </div>
+  </li>
+
+</template>
+

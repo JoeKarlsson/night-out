@@ -1,0 +1,49 @@
+<template name='setNightOut'>
+  <div class="row">
+    <div class="small-12 medium-10 large-10 small-centered columns">
+      <div class="header panel">
+        <div class="center-align">
+          <h4>Find out where your friends want to go tonight</h4>
+        </div>
+
+        <div class="row">
+          <div class="col s4">
+            <div class="center promo promo-example">
+              <i class="center material-icons circle">my_location</i>
+              <p class="promo-caption">Find Your Location</p>
+              <p class="light center">Allow Night Out to access your current location by hitting 'Allow'.</p>
+            </div>
+          </div>
+          <div class="col s4 center-align">
+            <div class="center promo promo-example">
+              <i class="material-icons circle">done</i>
+              <p class="promo-caption">Select Your Bars</p>
+              <p class="light center">Select the bars you want your friends to vote on from the list below, then press "Start your night out".</p>
+            </div>
+          </div>
+          <div class="col s4 center-align">
+            <div class="center promo promo-example">
+              <i class="material-icons circle">thumb_up</i>
+              <p class="promo-caption">Vote with your Friends</p>
+              <p class="light center">Send out the link to your friends to have them vote on the bar they want to go to tonight.</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  {{> map }}
+  <br>
+
+  <div class="row">
+    <div class="small-12 medium-10 large-10 small-centered columns">
+      <a id="finalizePlanButton" class="waves-effect waves-light btn-large"><i class="material-icons right">directions_run</i>Start your night out</a>
+      <br><br>
+      <h5>Select Target Options</h5>
+      {{> targetList }}
+    </div>
+  </div>
+
+</template>
