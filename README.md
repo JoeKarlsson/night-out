@@ -1,6 +1,6 @@
 #Night Out
 
-##A real time interactive lunch time coordination app built using Meteor.
+##A real time interactive coordination to help you and your friends find a place to go tonight. This was app built using Meteor.
 
 ## Usage
 1. Intall node.js https://nodejs.org/en/
