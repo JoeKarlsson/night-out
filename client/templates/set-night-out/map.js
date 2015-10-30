@@ -82,7 +82,7 @@ Template.map.onCreated(function() {
     var service = new google.maps.places.PlacesService(map.instance);
     service.nearbySearch({
       location : currentPost,
-      radius : 2300,
+      radius : 2600,
       types : ['bar']
     }, callback);
 

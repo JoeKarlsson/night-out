@@ -1,4 +1,5 @@
 var planId;
+var voted = undefined;
 
 Template.finalTargetListItem.helpers({
   getPlanId : function() {
@@ -9,6 +10,7 @@ Template.finalTargetListItem.helpers({
     planId = params._id;
   }
 });
+
 // Uber API Constants
 // Security note: these are visible to whomever views the source code!
 
@@ -23,7 +25,8 @@ var userLatitude,
     userLongitude,
     barLatitude,
     barLongitude;
-    //21.309102, -157.808425
+
+//21.309102, -157.808425
 
 // Create variable to store timer
 var timer;
@@ -113,22 +116,109 @@ Template.finalTargetListItem.onRendered(function() {
 //Voting for an item
 Template.finalTargetListItem.events({
   'click .collection-item' : function (event, template) {
+    //initialize this to self
+    var self = this;
 
-    Materialize.toast('Voted for ' + this.name, 4000);
-    //console.log(this);
-    // console.log(planId);
-    //
-    console.log(Plans.find(planId));
+    if (voted === undefined) {
+      voteForItem();
+    } else {
+      overrideVote();
+    }
 
+    function voteForItem() {
+      //Get all of the final selected launches that have been saved to the session
+      var allSelectedLaunches = Session.get('selectedLaunches');
+      console.log(allSelectedLaunches, 'allSelectedLaunches');
 
-    // Plans.update(planId, { $update : { finalLaunches : votes++ } }, function(error) {
+      //Find the index of the currently selected launch item in the DB Array
+      var index = allSelectedLaunches.findIndex( function(element) { return element.placeId == self.placeId } );
 
-    //   if (error) {
-    //     // display the error to the user
-    //     alert(error.reason);
-    //   } else {
-    //     console.log('Vote Added to ' + this.name, allSelectedLaunches);
-    //   }
-    // });
+      //Currently selected bar
+      var currentBar = allSelectedLaunches[index];
+
+      //Get the total votes
+      var totalVotes = currentBar.votes;
+      totalVotes++;
+      currentBar.votes = totalVotes;
+      allSelectedLaunches[index] = currentBar;
+
+      //Move the element with the most votes to the top of the list
+      var mostVotes = currentBar;
+      for (var i = 0; i < allSelectedLaunches.length; i++) {
+        if (allSelectedLaunches[i].votes > currentBar.votes) {
+          mostVotes = allSelectedLaunches[i];
+          var indexMostVotes = allSelectedLaunches.findIndex( function(element) { return element.placeId == mostVotes.placeId } );
+          allSelectedLaunches.splice(indexMostVotes,1);
+          allSelectedLaunches.unshift(mostVotes);
+        }
+      };
+
+      //Update the whole final selected launches in the DB
+      Plans.update(planId, { $set : { finalLaunches : allSelectedLaunches } }, function(error) {
+        if (error) {
+          // display the error to the user
+          alert(error.reason);
+        } else {
+          console.log('Vote Added to ' + currentBar.name);
+        }
+      });
+      //Materialize toast when item is voted on
+      Materialize.toast('Voted for ' + currentBar.name, 4000);
+      voted = currentBar;
+
+    }
+
+    function overrideVote() {
+
+      var allSelectedLaunches = Session.get('selectedLaunches');
+      console.log(allSelectedLaunches, 'allSelectedLaunches');
+
+      //Find the index of the currently selected launch item in the DB Array
+      var indexNew = allSelectedLaunches.findIndex( function(element) { return element.placeId == self.placeId } );
+
+      var indexOld = allSelectedLaunches.findIndex( function(element) { return element.placeId == voted.placeId } );
+
+      //Currently selected bar
+      var currentBar = allSelectedLaunches[indexNew];
+
+      var oldBar = allSelectedLaunches[indexOld];
+
+      //Get the total votes for the current bar
+      var totalVotesCurrent = currentBar.votes;
+      totalVotesCurrent++;
+      currentBar.votes = totalVotesCurrent;
+      allSelectedLaunches[indexNew] = currentBar;
+
+      //remove the vote for the previously selected vote
+      var totalVotesOld = oldBar.votes;
+      totalVotesOld--;
+      oldBar.votes = totalVotesOld;
+      allSelectedLaunches[indexOld] = oldBar;
+
+      //Move the element with the most votes to the top of the list
+      var mostVotes = currentBar;
+      for (var i = 0; i < allSelectedLaunches.length; i++) {
+        if (allSelectedLaunches[i].votes > currentBar.votes) {
+          mostVotes = allSelectedLaunches[i];
+          var indexMostVotes = allSelectedLaunches.findIndex( function(element) { return element.placeId == mostVotes.placeId } );
+          allSelectedLaunches.splice(indexMostVotes,1);
+          allSelectedLaunches.unshift(mostVotes);
+        }
+      };
+
+      //Update the whole final selected launches in the DB
+      Plans.update(planId, { $set : { finalLaunches : allSelectedLaunches } }, function(error) {
+        if (error) {
+          // display the error to the user
+          alert(error.reason);
+        } else {
+          console.log('Vote Added to ' + currentBar.name);
+        }
+      });
+      //Materialize toast when item is voted on
+      Materialize.toast('Voted for ' + currentBar.name, 4000);
+      voted = currentBar;
+    }
+
   }
 });

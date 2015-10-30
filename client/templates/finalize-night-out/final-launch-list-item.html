@@ -7,7 +7,13 @@
       <span class="title">{{name}}</span>
       <p><p class='time' id='time'>ESTIMATING TIME</p>
          <p class='money' id='money'>ESTIMATING COST OF RIDE</p>
-         <span class="badge">Votes: {{ votes }}</span>
+         <span class="badge">
+           <div class="chip">
+               {{ votes }}
+               <i class="material-icons">favorite_border</i>
+
+            </div>
+         </span>
           Rating: {{ rating }}
       </p>
       <div type="radio" id='radio_{{placeId}}' class="styled-checkbox"></div>
