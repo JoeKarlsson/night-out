@@ -1,9 +1,25 @@
 <template name='finalLaunchList'>
-    <div class="targets-list">
-        <ul class="collection">
-          {{#each allFinalTargets}}
-            {{> finalTargetListItem}}
-          {{/each}}
-      </ul>
+    <div class="targets-list purple accent-1">
+        <div class="container">
+
+            <div class="row">
+                <br>
+                <div class="col s6 left-align">
+                    <h5 class="flow-text white-text">Vote on where you want to go tonight</h5>
+                </div>
+
+            </div>
+
+            <div class="row">
+                <ul class="collection z-depth-4">
+                  {{#each allFinalTargets}}
+                    {{> finalTargetListItem}}
+                  {{/each}}
+                </ul>
+            </div>
+
+            <br>
+
+        </div>
     </div>
 </template>
