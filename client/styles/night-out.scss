@@ -53,3 +53,48 @@ main {
     transform: rotate(45deg);
   }
 }
+
+//==================Footer=================
+
+footer.page-footer {
+  margin-top: 0px;
+  padding-top: 0px;
+}
+
+//==================Sharing=================
+.btn.btn-facebook {
+  border-radius: 4px;
+  color: #FFFFFF;
+  background: #3B5998;
+  float: right;
+}
+.btn.btn-facebook:hover,
+.btn.btn-facebook:focus {
+  color: #FFFFFF;
+}
+.btn.btn-twitter {
+  border-radius: 4px;
+  color: #FFFFFF;
+  background: #4099FF;
+  float: right;
+}
+.btn.btn-twitter:hover,
+.btn.btn-twitter:focus {
+  color: #FFFFFF;
+}
+.btn.btn-google-plus {
+  border-radius: 4px;
+  color: #FFFFFF;
+  background: #D34836;
+  float: right;
+}
+.btn.btn-github {
+  border-radius: 4px;
+  color: #FFFFFF;
+  background: grey;
+  float: left;
+}
+.btn.btn-google-plus:hover,
+.btn.btn-google-plus:focus {
+  color: #FFFFFF;
+}

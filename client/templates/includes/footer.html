@@ -1,35 +1,46 @@
 <template name="footer">
 
+  <footer class="page-footer z-depth-4" style="margin-top: 0px; padding-top: 0px;">
+    <div class="container">
 
-
-  <footer class="page-footer">
-  <div class="container">
-      <div class="row">
-        <div class="col l6 s12">
-          <h5 class="white-text">Footer Content</h5>
-          <div class="row">
-          <div class="col m4 s6"><ul>
-          <li><a href="http://docs.closeheatapp.com" target="_blank">Docs</a></li>
-          <li><a href="/#pricing">Pricing</a></li>
-          <li><a href="/team">Team</a></li>
-          <li><a href="/blog">Blog</a></li>
-          </ul></div>
-          <div class="col m4 s6"><ul>
-          <li><a href="https://www.facebook.com/closeheatapp">Facebook</a></li>
-          <li><a href="https://plus.google.com/+closeheatapp">Google+</a></li>
-          <li><a href="https://twitter.com/closeheatapp">Twitter</a></li>
-          </ul></div>
+        <div class="row">
+          <div class="col m6 s12">
+            <h5 class="white-text">Night Out by Joe</h5>
+            <h6 class="white-text">Source code:</h6>
           </div>
         </div>
 
+        <div class="row">
+        <div class="col m6 left">
+
+          <a href="{{openGitHubCode}}" target="_blank" class="btn btn-github">
+            <i class="fa fa-github"></i>
+          </a>
+        </div>
+          <div class="col m6 s12 right">
+
+            <a href="{{shareOnFacebookLink}}" target="_blank" class="btn btn-facebook">
+              <i class="fa fa-facebook"></i>
+            </a>
+            <a href="{{shareOnTwitterLink}}" target="_blank" class="btn btn-twitter">
+              <i class="fa fa-twitter"></i>
+            </a>
+            <a href="{{shareOnGooglePlusLink}}" target="_blank" class="btn btn-google-plus">
+              <i class="fa fa-google-plus"></i>
+            </a>
+
+
+          </div>
       </div>
     </div>
-    <div class="footer-copyright">
+
+    <div class="footer-copyright z-depth-2">
       <div class="container">
-      © 2015 Joe Carlson
-      <a class="grey-text text-lighten-4 right" href="http://www.callmejoe.net">See more projects by Joe at callmejoe.net</a>
+        © 2015
+        <a class="grey-text text-lighten-4 right" href="http://www.callmejoe.net">See more projects by Joe at callmejoe.net</a>
       </div>
     </div>
+
   </footer>
 
 </template>

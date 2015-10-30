@@ -1,5 +1,5 @@
 //Global variable for setting default zoom in google maps
-var MAP_ZOOM = 15;
+var MAP_ZOOM = 14;
 var results;
 
 //When app starts load google maps
