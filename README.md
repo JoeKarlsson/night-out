@@ -25,6 +25,10 @@ This will install the meteor executable onto your system and have you ready to u
 
 ## Credits
 - Joe Carlson
+- Jessie Copeland
+- Alex Anich
+- Brian 'Boots'
+- Nolan 'skinny fatman'
 
 ## License
 
