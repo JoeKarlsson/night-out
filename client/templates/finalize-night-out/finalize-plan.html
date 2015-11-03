@@ -1,16 +1,19 @@
 <template name="finalizePlan">
 
-  {{> howTo }}
 
   <div class="row">
     <div class="small-12 medium-10 large-10 small-centered columns">
-        {{getAllFinalTargets}}
-    </div>
-  </div>
-
-  <div class="row">
-    <div class="small-12 medium-10 large-10 small-centered columns">
+    {{getAllFinalTargets}}
       <div class="center">
+
+      <div class="row">
+        <div class="col s12 center-align">
+          <div class="promo promo-example">
+            <p class="light flow-text">We need to find out what bars are nearby. Allow Night Out to see your current location</p>
+          </div>
+        </div>
+      </div>
+
         <div class="map-container center z-depth-4">
           {{getLaunchID}}
 
@@ -23,6 +26,10 @@
       </div>
     </div>
   </div>
+
+  {{> copy }}
+
+
 
   <div class="row" style="margin-bottom: 0px;">
     <div class="small-12 medium-10 large-10 small-centered columns">

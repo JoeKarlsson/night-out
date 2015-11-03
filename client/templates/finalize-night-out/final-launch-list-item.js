@@ -17,8 +17,8 @@ Template.finalTargetListItem.helpers({
 // var uberClientId = 'YOUR_CLIENT_ID',
 //     uberServerToken = 'YOUR_SERVER_TOKEN';
 
-var uberClientId = '-WBlnkgTN1cx0xDAD8PXGuHeHrjLoLyq',
-    uberServerToken = 'ngTPWsMxpW4q7COaZDduV0ke21peDVzC2GjTgtEK';
+var uberClientId = 'I8iDf46DcbPEC32PbibfPoBYBoHewzt8',
+    uberServerToken = 'TMiIg-k1lJKTpQyasp-8Tn05GWeunBxBcsI141ph';
 
 // Create variables to store latitude and longitude
 var userLatitude,
@@ -31,7 +31,9 @@ var userLatitude,
 // Create variable to store timer
 var timer;
 
-Template.finalTargetListItem.onRendered(function() {
+// Template.finalTargetListItem.onRendered(function() {
+Template.finalTargetListItem.helpers({
+  getUberTime : function() {
   var latLng = this.data.currentLocation;
   var lat = latLng.lat;
   var lng = latLng.lng;
@@ -86,7 +88,8 @@ Template.finalTargetListItem.onRendered(function() {
           //console.log(shortest);
           if (typeof shortest != typeof undefined) {
             console.log('Updating time and money estimates...');
-            $('.time').html('IN ' + Math.ceil(shortest.duration / 60.0) + ' MIN');
+            // $('.time').html('IN ' + Math.ceil(shortest.duration / 60.0) + ' MIN');
+            return Math.ceil(shortest.duration / 60.0);
 
             //update the Uber button with the money estimate
             $('.money').html(shortest.estimate);
@@ -95,8 +98,12 @@ Template.finalTargetListItem.onRendered(function() {
       }
     });
   }
+}
+});
 
-  $('.ride_btn').click(function(event) {
+
+Template.finalTargetListItem.events({
+  'click .ride_btn' : function (event, template) {
     // Redirect to Uber API via deep-linking to the mobile web-app
     var uberURL = 'https://m.uber.com/sign-up?';
 
@@ -110,8 +117,8 @@ Template.finalTargetListItem.onRendered(function() {
 
     // Redirect to Uber
     window.location.href = uberURL;
-  });
-})
+  }
+});
 
 //Voting for an item
 Template.finalTargetListItem.events({

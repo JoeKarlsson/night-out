@@ -1,0 +1,33 @@
+<template name="copy">
+
+  <div class="targets-list">
+      <div class="container">
+
+          <div class="row valign-wrapper">
+              <br>
+              <div class="col m6 s12 left-align">
+                  <p class="light flow-text">Want more friends to vote on where you are going tonight? Share this link with them.</p>
+              </div>
+
+              <div class="col m6 s12 right-align valign-wrapper">
+
+                <div class="input-field col m6 s12">
+                  <input name="clipboard-text" value='{{getURL}}' id="clipboard-text" type="text" class="validate">
+                  <label class="active" for="clipboard-text">
+                    URL
+                  </label>
+                </div>
+
+                <button id="target-to-copy" data-clipboard-target="clipboard-text" class="btn waves-effect waves-light" type="submit" name="action">
+                  Copy URL
+                </button>
+
+              </div>
+
+          </div>
+      </div>
+  </div>
+
+</template>
+
+

@@ -10,3 +10,4 @@ UI.registerHelper('shareOnGooglePlusLink', function() {
 UI.registerHelper('openGitHubCode', function() {
   return 'https://github.com/JoeKarlsson1/night-out';
 });
+
