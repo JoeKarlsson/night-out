@@ -11,10 +11,10 @@ curl https://install.meteor.com | sh
 
 This will install the meteor executable onto your system and have you ready to use Meteor.
 
-3. cd launch-target
-4. run 'meteor'
-4. open your browser window to 'http://localhost:3000/'
-5. set a launch target for your friends, family, or co-workers!
+4. cd launch-target
+5. run 'meteor'
+6. open your browser window to 'http://localhost:3000/'
+7. set up Night Out target for your friends, family, or co-workers!
 
 ## Contributing
 1. Fork it!
@@ -30,9 +30,36 @@ This will install the meteor executable onto your system and have you ready to u
 - Brian 'Boots'
 - Nolan 'skinny fatman'
 
-## License
+##Built With
+- Meteor
+- HTML
+- SCSS
+- Materialize CSS
+- MonogoDB
+- Google Maps API
 
-##TODO ITEMS
-- Get 'Select Location' feature working
-- Fix all routes
-- Finish styling
+##Packages Used
+- iron:router
+- sacha:spin
+- fourseven:scss
+- poetic:materialize-scss
+- dburles:google-maps
+- mdg:geolocation
+- fortawesome:fontawesome
+- service-configuration
+- okgrow:analytics
+- propercursive:zeroclipboard
+
+##Todo
+-Make night out ID searchable
+
+## License
+The MIT License
+
+Copyright (c) 2015 Glipcode http://glipcode.com
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.

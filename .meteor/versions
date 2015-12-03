@@ -13,7 +13,6 @@ caching-compiler@1.0.0
 caching-html-compiler@1.0.2
 callback-hook@1.0.4
 check@1.1.0
-coffeescript@1.0.11
 dburles:google-maps@1.1.5
 ddp@1.2.2
 ddp-client@1.2.1
@@ -49,7 +48,6 @@ launch-screen@1.0.4
 livedata@1.0.15
 localstorage@1.0.5
 logging@1.0.8
-manuelschoebel:ms-seo@0.4.1
 mdg:geolocation@1.1.0
 meteor@1.1.10
 meteor-base@1.0.1

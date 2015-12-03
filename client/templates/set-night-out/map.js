@@ -84,7 +84,7 @@ Template.map.onCreated(function() {
     service.nearbySearch({
       location : currentPost,
       radius : 2600,
-      types : ['bar']
+      types : ['bar', 'brewery']
     }, callback);
 
     //Error checking to check for status of query

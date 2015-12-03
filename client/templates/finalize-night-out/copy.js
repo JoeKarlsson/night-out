@@ -21,3 +21,9 @@ Template.copy.rendered = function() {
   } );
 
 }
+
+Template.copy.events({
+  'click #target-to-copy' : function (event) {
+    Materialize.toast('Copied URL to Clipboard', 4000);
+  }
+})
