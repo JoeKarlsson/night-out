@@ -78,7 +78,7 @@ Template.finalizePlan.onCreated(function() {
 
     function setMarkers(places) {
       for (var i = 0; i < places.length; i++) {
-        //console.log('places', places[i]);
+        console.log('places', places[i]);
         createMarker(places[i]);
       }
     }
