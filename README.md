@@ -1,19 +1,24 @@
- #Night Out
+<p align="center">
+	<img width=100% src="https://user-images.githubusercontent.com/4650739/51010586-9edb0e80-151a-11e9-924c-c521bf0b1701.png" />
+</p>
+
+<h1 align="center">Night Out</h1>
 
 > A real time interactive coordination to help you and your friends find a place to go tonight. This was app built using Meteor.
 
 ## Usage
 1. Intall node.js https://nodejs.org/en/
-1. To begin with, we can install Meteor by opening a terminal window and typing:
-
+2. To begin with, we can install Meteor by opening a terminal window and typing:
+   
+```bash
 curl https://install.meteor.com | sh
+```
 
 This will install the meteor executable onto your system and have you ready to use Meteor.
 
-1. cd launch-target
-1. run 'meteor'
-1. open your browser window to 'http://localhost:3000/'
-1. set up Night Out target for your friends, family, or co-workers!
+1. cd night-out
+2. run 'meteor'
+3. open your browser window to 'http://localhost:3000/'
 
 ## Contributing
 1. Fork it!
@@ -22,20 +27,31 @@ This will install the meteor executable onto your system and have you ready to u
 4. Push to the branch: `git push origin my-new-feature`
 5. Submit a pull request :D
 
+## Built With
+- Meteor
+- HTML
+- SCSS
+- Materialize CSS
+- MonogoDB
+- Google Maps API
+
+### Maintainers
+
+<table>
+  <tbody>
+    <tr>
+      <td align="center">
+        <img width="150 height="150"
+        src="https://avatars.githubusercontent.com/JoeKarlsson?v=3">
+        <br />
+        <a href="https://github.com/JoeKarlsson">Joe Karlsson</a>
+    <tr>
+  <tbody>
+</table>
+
 ## Credits
-- Joe Carlson
+- Joe Karlsson
 - Jessie Copeland
 - Alex Anich
 - Brian 'Boots'
-- Nolan 'skinny fatman'
-
-## License
-The MIT License
-
-Copyright (c) 2019 Joe Karlsson
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+- Nolan 'Skinny Fatman'
