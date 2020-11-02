@@ -1,8 +1,9 @@
 {
-  "targets": [
+  'targets': [
     {
-      "target_name": "hello",
-      "sources": [ "hello.cc" ]
+      'target_name': 'binding',
+      'sources': [ 'binding.cc' ],
+      'includes': ['../common.gypi'],
     }
   ]
 }
