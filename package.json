@@ -15,7 +15,7 @@
   },
   "scripts": {
     "start": "meteor",
-    "install": "node-gyp configure; node-gyp build",
+    "install": "node-gyp rebuild",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
