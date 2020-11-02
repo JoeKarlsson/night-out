@@ -10,7 +10,9 @@
     "@babel/runtime": "^7.12.1",
     "meteor-node-stubs": "^1.0.1"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "node-gyp": "^7.1.2"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
