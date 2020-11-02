@@ -1,0 +1,27 @@
+{
+  "name": "night-out",
+  "version": "1.0.0",
+  "description": "<p align=\"center\"> \t<img width=100% src=\"https://user-images.githubusercontent.com/4650739/51010586-9edb0e80-151a-11e9-924c-c521bf0b1701.png\" /> </p>",
+  "main": "index.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "dependencies": {
+    "meteor-node-stubs": "^1.0.1"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JoeKarlsson/night-out.git"
+  },
+  "keywords": [],
+  "author": "Joe <joekarlsson1@gmail.com>",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/JoeKarlsson/night-out/issues"
+  },
+  "homepage": "https://github.com/JoeKarlsson/night-out#readme"
+}
