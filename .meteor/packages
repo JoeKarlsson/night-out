@@ -4,27 +4,31 @@
 # 'meteor add' and 'meteor remove' will edit this file for you,
 # but you can also edit it by hand.
 
-meteor-base             # Packages every Meteor app needs to have
-mobile-experience       # Packages for a great mobile UX
-mongo                   # The database Meteor supports right now
+meteor-base@1.4.0             # Packages every Meteor app needs to have
+mobile-experience@1.0.5       # Packages for a great mobile UX
+mongo@1.8.0                   # The database Meteor supports right now
 blaze-html-templates    # Compile .html files into Meteor Blaze views
-session                 # Client-side reactive dictionary for your app
+session@1.2.0                 # Client-side reactive dictionary for your app
 jquery                  # Helpful client-side library
-tracker                 # Meteor's client-side reactive programming library
+tracker@1.2.0                 # Meteor's client-side reactive programming library
 
-standard-minifiers      # JS/CSS minifiers run for production mode
-es5-shim                # ECMAScript 5 compatibility for older browsers.
-ecmascript              # Enable ECMAScript2015+ syntax in app code
+es5-shim@4.8.0                # ECMAScript 5 compatibility for older browsers.
+ecmascript@0.14.2              # Enable ECMAScript2015+ syntax in app code
 
-autopublish             # Publish all data to the clients (for prototyping)
-insecure                # Allow all DB writes from clients (for prototyping)
+autopublish@1.0.7             # Publish all data to the clients (for prototyping)
+insecure@1.0.7                # Allow all DB writes from clients (for prototyping)
 iron:router
 sacha:spin
 fourseven:scss
-poetic:materialize-scss
 dburles:google-maps
 mdg:geolocation
 fortawesome:fontawesome
-service-configuration
+service-configuration@1.0.11
 okgrow:analytics
 propercursive:zeroclipboard
+standard-minifier-js
+shell-server
+dynamic-import
+underscore
+seba:minifiers-autoprefixer
+poetic:materialize-scss
