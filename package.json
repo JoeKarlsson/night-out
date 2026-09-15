@@ -7,15 +7,11 @@
     "lib": "lib"
   },
   "dependencies": {
-    "@babel/runtime": "^7.12.1",
-    "meteor-node-stubs": "^1.0.1"
-  },
-  "devDependencies": {
-    "node-gyp": "^7.1.2"
+    "@babel/runtime": "^8.0.5",
+    "meteor-node-stubs": "^1.2.30"
   },
   "scripts": {
     "start": "meteor",
-    "install": "node-gyp rebuild",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -26,7 +22,7 @@
   "author": "Joe <joekarlsson1@gmail.com>",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/JoeKarlsson/night-out/issues"
+    "url": "https://github.com/JoekKarlsson/night-out/issues"
   },
   "homepage": "https://github.com/JoeKarlsson/night-out#readme"
 }
