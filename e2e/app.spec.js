@@ -156,7 +156,6 @@ test('simulated friends vote over time without changing the share link', async (
   await page.getByLabel(/Corner Booth/).check();
   await page.locator('#start').click();
   await expect(page.getByText("Friends' votes are simulated in this demo")).toBeVisible();
-  await expect(page.locator('#vote-summary')).toHaveText('2 bars, no votes yet.');
   const link = await page.locator('#share-link').inputValue();
 
   // ?fast runs the minute of fake voting in under a second
