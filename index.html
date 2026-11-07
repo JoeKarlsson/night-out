@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+    <meta name="color-scheme" content="only dark">
+    <meta name="darkreader-lock">
+    <title>Night Out: vote with friends on where to go tonight</title>
+    <meta name="description" content="Pick a few bars near you, send your friends the link, and let everyone vote on where you're going tonight.">
+    <meta name="author" content="Joe Karlsson">
+    <meta name="theme-color" content="#14111c">
+    <link rel="canonical" href="https://night-out.joekarlsson.com/">
+
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Night Out">
+    <meta property="og:url" content="https://night-out.joekarlsson.com/">
+    <meta property="og:title" content="Night Out">
+    <meta property="og:description" content="Pick a few bars near you, send your friends the link, and let everyone vote on where you're going tonight.">
+    <meta property="og:image" content="https://night-out.joekarlsson.com/og.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="The Night Out logo, a yellow crescent moon with pink vote bars, on a dark night sky">
+    <meta property="og:locale" content="en_US">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:site" content="@joekarlsson1">
+    <meta name="twitter:creator" content="@joekarlsson1">
+    <meta name="twitter:title" content="Night Out">
+    <meta name="twitter:description" content="Pick a few bars near you, send your friends the link, and let everyone vote on where you're going tonight.">
+    <meta name="twitter:image" content="https://night-out.joekarlsson.com/og.png">
+    <meta name="twitter:image:alt" content="The Night Out logo, a yellow crescent moon with pink vote bars, on a dark night sky">
+
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="icon" href="/favicon-32x32.png" sizes="32x32" type="image/png">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <link rel="manifest" href="/site.webmanifest">
+    <script type="application/ld+json">
+      {"@context":"https://schema.org","@type":"WebApplication","name":"Night Out","url":"https://night-out.joekarlsson.com/","applicationCategory":"LifestyleApplication","operatingSystem":"Any","browserRequirements":"Requires JavaScript","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"Pick a few bars near you, send your friends the link, and let everyone vote on where you're going tonight.","author":{"@type":"Person","name":"Joe Karlsson","url":"https://www.joekarlsson.com/"}}
+    </script>
+    <script type="module" src="/src/main.js"></script>
+    <script src="/analytics.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="site-header">
+      <a class="brand" href="#" data-home>
+        <img src="/favicon.svg" alt="" width="40" height="40">
+        <span>Night Out</span>
+      </a>
+    </header>
+
+    <main id="main" tabindex="-1">
+      <h1 id="page-title">Where are we going tonight?</h1>
+      <section id="pick-view" aria-labelledby="page-title">
+        <p class="lede">Pick a few bars near you, send your friends the link, and let everyone vote.</p>
+
+        <div class="actions" id="locate-actions">
+          <button type="button" class="button primary" id="locate">Find bars near me</button>
+          <button type="button" class="button" id="demo">Try it with demo bars</button>
+        </div>
+        <p class="status" id="pick-status" role="status" aria-live="polite"></p>
+
+        <div class="layout" id="pick-layout" hidden>
+          <div class="map" id="pick-map" role="region" aria-label="Map of bars near you"></div>
+          <form id="pick-form" class="picker">
+            <fieldset>
+              <legend>Choose two or more bars for the vote</legend>
+              <ul class="place-list" id="pick-list"></ul>
+            </fieldset>
+            <div class="sticky-action">
+              <button type="submit" class="button primary" id="start" disabled>Start the vote</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <section id="vote-view" aria-labelledby="page-title" hidden>
+        <p class="lede" id="vote-summary"></p>
+
+        <div class="share">
+          <label for="share-link">Send this link to the group. Your vote travels with it, so after you vote, send the new link.</label>
+          <div class="share-row">
+            <input id="share-link" type="url" readonly>
+            <button type="button" class="button primary" id="copy">Copy link</button>
+            <button type="button" class="button" id="native-share" hidden>Share</button>
+          </div>
+        </div>
+        <p class="status" id="vote-status" role="status" aria-live="polite"></p>
+
+        <div class="layout">
+          <div class="map" id="vote-map" role="region" aria-label="Map of the bars in this vote"></div>
+          <div>
+            <h2>Tap a bar to vote</h2>
+            <ol class="place-list votes" id="vote-list"></ol>
+            <p><a href="#" data-home>Start a new night out</a></p>
+          </div>
+        </div>
+      </section>
+
+      <section id="broken-view" aria-labelledby="page-title" hidden>
+        <p class="lede">Part of the link probably got cut off when it was copied. Ask whoever sent it for a fresh one, or <a href="#" data-home>start your own night out</a>.</p>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>Votes live in the link and on your phone; there's no account and no server. Bar data comes from <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, looked up through the <a href="https://overpass-api.de/">Overpass API</a>, which sees your approximate location only when you search. Visits are counted with cookie-free <a href="https://plausible.io/privacy-focused-web-analytics">Plausible</a>.</p>
+      <p>Made by <a href="https://www.joekarlsson.com/">Joe Karlsson</a>, first built with friends in 2015. <a href="https://github.com/JoeKarlsson/night-out">Source on GitHub</a>.</p>
+    </footer>
+  </body>
+</html>
