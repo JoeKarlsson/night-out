@@ -1,9 +1,16 @@
-// Finding bars: OpenStreetMap data through the public Overpass API, with a
-// made-up demo list when Overpass can't be reached.
+// Finding bars: OpenStreetMap data through the public Overpass API, then
+// OSM's Nominatim search when Overpass is down (it often is), then a made-up
+// demo list when neither answers.
 
 export const OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
+export const NOMINATIM_URL = 'https://nominatim.openstreetmap.org/search';
 export const SEARCH_RADIUS_METERS = 2600;
 const MAX_RESULTS = 30;
+const OVERPASS_TIMEOUT_MS = 6000;
+const NOMINATIM_TIMEOUT_MS = 8000;
+// Nominatim's usage policy allows one request a second
+const NOMINATIM_GAP_MS = 1100;
+const NOMINATIM_PHRASES = ['bar', 'pub', 'brewery'];
 
 const KIND_LABELS = { bar: 'Bar', pub: 'Pub', biergarten: 'Beer garden', brewery: 'Brewery' };
 
@@ -24,21 +31,85 @@ export function parseOverpass(json, center) {
     const id = `${el.type[0]}${el.id}`;
     if (seen.has(id)) continue;
     seen.add(id);
-    const kind = el.tags.craft === 'brewery' ? 'brewery' : el.tags.amenity;
-    places.push({ id, name, lat, lng, kind: KIND_LABELS[kind] ?? 'Bar', distance: distanceMeters(center, [lat, lng]) });
+    const kind = el.tags.craft === 'brewery' ? 'Brewery' : KIND_LABELS[el.tags.amenity] ?? 'Bar';
+    places.push({ id, name, lat, lng, kind, distance: distanceMeters(center, [lat, lng]) });
   }
   return places.sort((a, b) => a.distance - b.distance).slice(0, MAX_RESULTS);
 }
 
-export async function fetchNearbyBars(center, { fetchImpl = fetch, signal } = {}) {
-  const response = await fetchImpl(OVERPASS_URL, {
-    method: 'POST',
-    body: new URLSearchParams({ data: overpassQuery(center[0], center[1]) }),
-    signal,
-  });
-  if (!response.ok) throw new Error(`Overpass answered ${response.status}`);
-  return parseOverpass(await response.json(), center);
+function kindOf(category, type) {
+  return category === 'craft' && type === 'brewery' ? 'Brewery' : KIND_LABELS[type] ?? 'Bar';
 }
+
+/** Box around `center` for Nominatim's viewbox: "west,north,east,south". */
+export function viewbox([lat, lng], radius = SEARCH_RADIUS_METERS) {
+  const dLat = radius / 111320;
+  const dLng = radius / (111320 * Math.cos((lat * Math.PI) / 180));
+  return [lng - dLng, lat + dLat, lng + dLng, lat - dLat].map((n) => n.toFixed(5)).join(',');
+}
+
+export function nominatimUrl(phrase, center) {
+  const params = new URLSearchParams({ q: phrase, format: 'jsonv2', limit: '40', bounded: '1', viewbox: viewbox(center) });
+  return `${NOMINATIM_URL}?${params}`;
+}
+
+/** Turn Nominatim results into places, keeping only bars, pubs, beer gardens and breweries. */
+export function parseNominatim(results, center, seen = new Set()) {
+  const places = [];
+  for (const r of results ?? []) {
+    const isBar = r.category === 'amenity' && Object.hasOwn(KIND_LABELS, r.type);
+    const isBrewery = r.category === 'craft' && r.type === 'brewery';
+    const name = r.name?.trim();
+    const lat = Number(r.lat);
+    const lng = Number(r.lon);
+    if ((!isBar && !isBrewery) || !name || !Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+    const id = `${r.osm_type?.[0] ?? 'x'}${r.osm_id}`;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    places.push({ id, name, lat, lng, kind: kindOf(r.category, r.type), distance: distanceMeters(center, [lat, lng]) });
+  }
+  return places;
+}
+
+async function getJson(fetchImpl, url, init, timeoutMs) {
+  const response = await fetchImpl(url, { ...init, signal: AbortSignal.timeout(timeoutMs) });
+  if (!response.ok) throw new Error(`${new URL(url).host} answered ${response.status}`);
+  return response.json();
+}
+
+export async function fetchFromOverpass(center, { fetchImpl = fetch } = {}) {
+  const body = new URLSearchParams({ data: overpassQuery(center[0], center[1]) });
+  return parseOverpass(await getJson(fetchImpl, OVERPASS_URL, { method: 'POST', body }, OVERPASS_TIMEOUT_MS), center);
+}
+
+export async function fetchFromNominatim(center, { fetchImpl = fetch, wait = sleep } = {}) {
+  const seen = new Set();
+  const places = [];
+  for (const [i, phrase] of NOMINATIM_PHRASES.entries()) {
+    if (i > 0) await wait(NOMINATIM_GAP_MS);
+    places.push(...parseNominatim(await getJson(fetchImpl, nominatimUrl(phrase, center), {}, NOMINATIM_TIMEOUT_MS), center, seen));
+  }
+  return places.sort((a, b) => a.distance - b.distance).slice(0, MAX_RESULTS);
+}
+
+/**
+ * Real bars near `center`: Overpass first, Nominatim if Overpass fails.
+ * An empty answer is an answer; only errors move on to the next source.
+ * Throws an AggregateError when both fail.
+ */
+export async function fetchNearbyBars(center, options = {}) {
+  const errors = [];
+  for (const source of [fetchFromOverpass, fetchFromNominatim]) {
+    try {
+      return await source(center, options);
+    } catch (error) {
+      errors.push(error);
+    }
+  }
+  throw new AggregateError(errors, 'No OpenStreetMap search answered');
+}
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // Fictional bars placed around whatever center the visitor has, used when
 // Overpass is down or rate-limits us. Offsets are meters north and east.

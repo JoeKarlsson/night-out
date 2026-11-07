@@ -1,6 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseOverpass, demoBars, distanceMeters, formatDistance, overpassQuery, fetchNearbyBars } from '../src/places.js';
+import {
+  parseOverpass, parseNominatim, demoBars, distanceMeters, formatDistance, overpassQuery, fetchNearbyBars,
+  OVERPASS_URL, NOMINATIM_URL,
+} from '../src/places.js';
 
 const center = [44.9778, -93.265];
 
@@ -22,12 +25,59 @@ test('parseOverpass keeps named bars, uses way centers, dedupes and sorts by dis
   assert.deepEqual(parseOverpass({}, center), []);
 });
 
-test('fetchNearbyBars posts the query and throws on HTTP errors', async () => {
-  let body;
-  const ok = async (_url, init) => { body = init.body.get('data'); return { ok: true, json: async () => ({ elements: [] }) }; };
-  assert.deepEqual(await fetchNearbyBars(center, { fetchImpl: ok }), []);
-  assert.equal(body, overpassQuery(...center));
-  await assert.rejects(fetchNearbyBars(center, { fetchImpl: async () => ({ ok: false, status: 429 }) }), /429/);
+const nominatimHit = (name, type, osm_id, category = 'amenity') =>
+  ({ name, category, type, osm_type: 'node', osm_id, lat: '44.978', lon: '-93.265' });
+
+// A fake fetch that answers each host from a table and records the calls
+function fakeFetch(answers) {
+  const calls = [];
+  const fetchImpl = async (url, init) => {
+    calls.push(url.startsWith(OVERPASS_URL) ? `overpass ${init.body.get('data') ? 'query' : ''}`.trim() : new URL(url).searchParams.get('q'));
+    const answer = url.startsWith(OVERPASS_URL) ? answers.overpass : answers.nominatim?.(new URL(url).searchParams.get('q'));
+    if (answer instanceof Error) throw answer;
+    if (typeof answer === 'number') return { ok: false, status: answer };
+    return { ok: true, json: async () => answer };
+  };
+  return { fetchImpl, calls, wait: async () => {} };
+}
+
+test('fetchNearbyBars uses Overpass when it answers, even with nothing found', async () => {
+  const fake = fakeFetch({ overpass: { elements: [] } });
+  assert.deepEqual(await fetchNearbyBars(center, fake), []);
+  assert.deepEqual(fake.calls, ['overpass query']);
+});
+
+test('fetchNearbyBars falls back to Nominatim in order when Overpass fails, and dedupes', async () => {
+  for (const overpass of [502, new Error('timed out')]) {
+    const fake = fakeFetch({
+      overpass,
+      nominatim: (q) => ({
+        bar: [nominatimHit('Nye\'s', 'bar', 1), nominatimHit('Some Cafe', 'cafe', 9)],
+        pub: [nominatimHit('Inbound', 'pub', 2)],
+        brewery: [nominatimHit('Inbound', 'brewery', 2, 'craft'), nominatimHit('Modist', 'brewery', 3, 'craft')],
+      })[q],
+    });
+    const places = await fetchNearbyBars(center, fake);
+    assert.deepEqual(fake.calls, ['overpass query', 'bar', 'pub', 'brewery']);
+    assert.deepEqual(places.map((p) => [p.name, p.kind]).sort(), [['Inbound', 'Pub'], ['Modist', 'Brewery'], ["Nye's", 'Bar']]);
+  }
+});
+
+test('fetchNearbyBars rejects when Overpass and Nominatim both fail', async () => {
+  const fake = fakeFetch({ overpass: 504, nominatim: () => 503 });
+  await assert.rejects(fetchNearbyBars(center, fake), (e) => e instanceof AggregateError && e.errors.length === 2);
+  assert.deepEqual(fake.calls, ['overpass query', 'bar']);
+});
+
+test('parseNominatim keeps only named bars with coordinates', () => {
+  const places = parseNominatim([
+    nominatimHit('', 'bar', 1),
+    { ...nominatimHit('No coords', 'bar', 2), lat: undefined },
+    nominatimHit('Proto', 'toString', 3),
+    nominatimHit('Beer Garden', 'biergarten', 4),
+  ], center);
+  assert.deepEqual(places.map((p) => [p.id, p.kind]), [['n4', 'Beer garden']]);
+  assert.ok(NOMINATIM_URL.startsWith('https://nominatim.openstreetmap.org/'));
 });
 
 test('demo bars sit within a mile of any center', () => {

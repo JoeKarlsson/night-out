@@ -9,15 +9,26 @@ const overpass = {
     { type: 'way', id: 3, center: { lat: 44.981, lon: -93.27 }, tags: { craft: 'brewery', name: 'Mock Brewing' } },
   ],
 };
-const TILE = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', 'base64');
+const nominatim = {
+  bar: [{ name: 'Nominatim Tavern', category: 'amenity', type: 'bar', osm_type: 'node', osm_id: 7, lat: '44.979', lon: '-93.266' }],
+  pub: [],
+  brewery: [{ name: 'Nominatim Brewing', category: 'craft', type: 'brewery', osm_type: 'way', osm_id: 8, lat: '44.981', lon: '-93.27' }],
+};
+// A map style with only a background, so the map draws without tiles
+const STYLE = { version: 8, sources: {}, layers: [{ id: 'bg', type: 'background', paint: { 'background-color': '#0c0c0c' } }] };
 
-// No real network in tests: OSM tiles and Overpass are stubbed, and any other
-// third-party request fails the test.
-async function stubNetwork(page, { overpassStatus = 200 } = {}) {
+// No real network in tests: the map style, Overpass and Nominatim are
+// stubbed, and any other third-party request fails the test.
+async function stubNetwork(page, { overpassStatus = 200, nominatimStatus = 200 } = {}) {
   const failed = [];
-  await page.route('https://tile.openstreetmap.org/**', (r) => r.fulfill({ body: TILE, contentType: 'image/png' }));
+  await page.route('https://tiles.openfreemap.org/**', (r) => r.fulfill({ json: STYLE }));
   await page.route('https://overpass-api.de/**', (r) =>
     overpassStatus === 200 ? r.fulfill({ json: overpass }) : r.fulfill({ status: overpassStatus, body: 'busy' }),
+  );
+  await page.route('https://nominatim.openstreetmap.org/**', (r) =>
+    nominatimStatus === 200
+      ? r.fulfill({ json: nominatim[new URL(r.request().url()).searchParams.get('q')] ?? [] })
+      : r.fulfill({ status: nominatimStatus, body: 'busy' }),
   );
   page.on('requestfailed', (req) => failed.push(req.url()));
   const errors = [];
@@ -100,8 +111,33 @@ test('find bars, start a vote, vote, change the vote and share the link', async 
   expect(failed).toEqual([]);
 });
 
-test('Overpass down or location refused falls back to demo bars', async ({ page }) => {
-  await stubNetwork(page, { overpassStatus: 429 });
+test('Overpass down falls back to Nominatim, and the map draws', async ({ page, context }) => {
+  const { errors } = await stubNetwork(page, { overpassStatus: 502 });
+  await context.setGeolocation(HERE);
+  await context.grantPermissions(['geolocation']);
+  await page.goto('./');
+  await page.getByRole('button', { name: 'Find bars near me' }).click();
+  await expect(page.locator('#pick-status')).toContainText('Found 2 bars');
+  await expect(page.getByText('Nominatim Brewing')).toBeVisible();
+  // MapLibre started (or said plainly that it couldn't)
+  await expect(page.locator('#pick-map .maplibregl-canvas, #pick-map.map-failed')).toHaveCount(1);
+  await expect(page.locator('#pick-map .map-dot-bar')).toHaveCount(2);
+  await page.getByLabel(/Nominatim Tavern/).check();
+  await expect(page.locator('#pick-map .map-dot-bar.is-selected')).toHaveCount(1);
+  // The browser logs the stubbed 502 itself; anything else is a real error
+  expect(errors.filter((e) => !e.includes('status of 502'))).toEqual([]);
+});
+
+test('Overpass and Nominatim down, or location refused, falls back to demo bars', async ({ page, context }) => {
+  await stubNetwork(page, { overpassStatus: 429, nominatimStatus: 503 });
+  await context.setGeolocation(HERE);
+  await context.grantPermissions(['geolocation']);
+  await page.goto('./');
+  await page.getByRole('button', { name: 'Find bars near me' }).click();
+  await expect(page.locator('#pick-status')).toContainText('made-up demo bars, not real ones');
+  await expect(page.locator('#pick-list li')).toHaveCount(8);
+
+  await context.clearPermissions();
   await page.goto('./');
   // No geolocation permission granted: the browser refuses
   await page.getByRole('button', { name: 'Find bars near me' }).click();
@@ -110,6 +146,36 @@ test('Overpass down or location refused falls back to demo bars', async ({ page 
 
   await page.getByRole('button', { name: 'Try it with demo bars' }).click();
   await expect(page.locator('#pick-status')).toContainText('Honolulu');
+});
+
+test('simulated friends vote over time without changing the share link', async ({ page }) => {
+  const { errors } = await stubNetwork(page);
+  await page.goto('./?fast');
+  await page.getByRole('button', { name: 'Try it with demo bars' }).click();
+  await page.getByLabel(/The Last Call/).check();
+  await page.getByLabel(/Corner Booth/).check();
+  await page.locator('#start').click();
+  await expect(page.getByText("Friends' votes are simulated in this demo")).toBeVisible();
+  await expect(page.locator('#vote-summary')).toHaveText('2 bars, no votes yet.');
+  const link = await page.locator('#share-link').inputValue();
+
+  // ?fast runs the minute of fake voting in under a second
+  const feed = page.getByRole('log');
+  await expect(feed.locator('li').first()).toHaveText(/^(Sam|Riley|Jo|Maya|Theo|Priya|Luis|Nina|Ari|Dev|Kat|Omar) voted for (The Last Call|Corner Booth)$/);
+  await expect(async () => expect(await feed.locator('li').count()).toBeGreaterThanOrEqual(3)).toPass();
+  await expect(page.locator('#vote-summary')).toContainText('so far');
+  await expect(page.locator('#crowd-waiting')).toBeHidden();
+  expect(await page.locator('#share-link').inputValue()).toBe(link);
+
+  // A refresh brings back the same crowd
+  const before = await feed.locator('li').allTextContents();
+  await page.waitForTimeout(1500);
+  const settled = await feed.locator('li').allTextContents();
+  await page.reload();
+  await expect(feed.locator('li')).toHaveText(settled);
+  expect(settled.slice(0, before.length)).toEqual(before);
+  await axe(page);
+  expect(errors).toEqual([]);
 });
 
 test('a mangled link says so, and missing pages get the 404', async ({ page }) => {

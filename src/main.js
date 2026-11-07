@@ -1,8 +1,8 @@
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
 import './style.css';
 import { createPlan, encodePlan, decodePlan, applyVote, rankPlaces, totalVotes } from './plan.js';
 import { fetchNearbyBars, demoBars, formatDistance } from './places.js';
+import { createMap } from './map.js';
+import { crowdSchedule, crowdAt, addVotes, describeEvent } from './crowd.js';
 
 // Honolulu's Chinatown, where Night Out was first built: the demo location
 // when someone skips geolocation or says no to it.
@@ -13,54 +13,86 @@ const $ = (id) => document.getElementById(id);
 const views = { pick: $('pick-view'), vote: $('vote-view'), broken: $('broken-view') };
 const TITLES = { pick: 'Where are we going tonight?', vote: 'Vote on tonight', broken: 'This link is broken' };
 
-let pickMap;
-let voteMap;
 let nearby = { center: null, places: [] };
 let currentPlan = null;
+
+// ---- Simulated friends -----------------------------------------------------
+// Made-up friends vote over the first minute so the page feels live. Their
+// votes are added on screen only; the share link carries real votes alone.
+// ?fast runs the minute in under a second, for the end-to-end tests.
+const CROWD_SPEED = new URLSearchParams(location.search).has('fast') ? 100 : 1;
+const CROWD_START_KEY = (planId) => `night-out:crowd-start:${planId}`;
+let crowd = null;
+
+function crowdStartTime(planId) {
+  try {
+    const saved = Number(localStorage.getItem(CROWD_START_KEY(planId)));
+    if (saved > 0 && saved <= Date.now()) return saved;
+    const now = Date.now();
+    localStorage.setItem(CROWD_START_KEY(planId), String(now));
+    return now;
+  } catch {
+    return Date.now();
+  }
+}
+
+function crowdElapsed() {
+  return (Date.now() - crowd.start) * CROWD_SPEED;
+}
+
+function startCrowd(plan) {
+  if (crowd?.planId === plan.id) return;
+  stopCrowd();
+  crowd = { planId: plan.id, schedule: crowdSchedule(plan), start: crowdStartTime(plan.id), shown: 0, timer: null };
+  $('crowd-feed').replaceChildren();
+  scheduleNextCrowdVote();
+}
+
+function scheduleNextCrowdVote() {
+  const next = crowd.schedule.find((event) => event.at > crowdElapsed());
+  if (!next) return;
+  crowd.timer = setTimeout(() => {
+    if (currentPlan?.id === crowd.planId) renderVote(currentPlan);
+    scheduleNextCrowdVote();
+  }, (next.at - crowdElapsed()) / CROWD_SPEED + 20);
+}
+
+function stopCrowd() {
+  if (crowd) clearTimeout(crowd.timer);
+  crowd = null;
+}
+
+/** Append only the new lines, so screen readers announce each vote once. */
+function renderCrowdFeed(happened, places) {
+  const feed = $('crowd-feed');
+  for (const event of happened.slice(crowd.shown)) {
+    const li = document.createElement('li');
+    li.textContent = describeEvent(event, places);
+    // Highlight votes as they arrive, not a backlog shown after a refresh
+    if (crowdElapsed() - event.at < 2000) li.className = 'is-new';
+    feed.append(li);
+  }
+  crowd.shown = happened.length;
+  $('crowd-waiting').hidden = happened.length > 0;
+}
 
 function showView(name) {
   for (const [key, el] of Object.entries(views)) el.hidden = key !== name;
   $('page-title').textContent = TITLES[name];
 }
 
-function makeMap(el) {
-  const map = L.map(el, { scrollWheelZoom: false, attributionControl: true });
-  map.attributionControl.setPrefix(false);
-  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-  }).addTo(map);
-  return map;
-}
-
-function clearMarkers(map) {
-  map.eachLayer((layer) => {
-    if (layer instanceof L.CircleMarker) map.removeLayer(layer);
-  });
-}
-
-function youAreHere(map, center) {
-  L.circleMarker(center, { radius: 9, color: '#14111c', weight: 2, fillColor: '#f6e86b', fillOpacity: 1 })
-    .bindTooltip('You', { direction: 'top' })
-    .addTo(map);
-}
-
-function barMarker(map, place, selected) {
-  return L.circleMarker([place.lat, place.lng], {
-    radius: selected ? 9 : 7,
-    color: '#14111c',
-    weight: 2,
-    fillColor: selected ? '#ff2e88' : '#c9c3d6',
-    fillOpacity: 1,
-  })
-    .bindTooltip(place.name, { direction: 'top' })
-    .addTo(map);
-}
-
-function fitTo(map, points) {
-  map.invalidateSize();
-  if (points.length === 1) map.setView(points[0], 15);
-  else map.fitBounds(L.latLngBounds(points), { padding: [30, 30], maxZoom: 16 });
+// One map per view, made the first time it's needed. If MapLibre can't
+// start (no WebGL), the map box says so and the list still works.
+async function mapFor(el) {
+  if (!el.mapPromise) {
+    el.mapPromise = createMap(el).catch((error) => {
+      el.classList.add('map-failed');
+      el.textContent = "The map couldn't load in this browser. The list below has every bar.";
+      window.plausible?.('JS Error', { props: { message: `map: ${error.message}` } });
+      return null;
+    });
+  }
+  return el.mapPromise;
 }
 
 // ---- Pick view -------------------------------------------------------------
@@ -109,7 +141,7 @@ async function findBars(useDemo) {
           if (!places.length) places = demoBars(center);
         } catch {
           places = demoBars(center);
-          setPickStatus("Couldn't reach OpenStreetMap right now, so these are made-up demo bars around you.");
+          setPickStatus("OpenStreetMap's bar search isn't answering right now, so these are made-up demo bars, not real ones. Try again in a few minutes.");
         }
       }
     }
@@ -122,15 +154,15 @@ async function findBars(useDemo) {
 
 function renderPicker() {
   $('pick-layout').hidden = false;
-  pickMap ??= makeMap($('pick-map'));
-  clearMarkers(pickMap);
-  youAreHere(pickMap, nearby.center);
 
   const list = $('pick-list');
   list.replaceChildren();
-  const markers = new Map();
+  const shown = nearby;
+  const mapReady = mapFor($('pick-map')).then((map) => {
+    if (map && nearby === shown) map.showPlaces(shown.center, shown.places);
+    return map;
+  });
   nearby.places.forEach((place) => {
-    markers.set(place.id, barMarker(pickMap, place, false));
     const li = document.createElement('li');
     const label = document.createElement('label');
     const box = document.createElement('input');
@@ -147,12 +179,11 @@ function renderPicker() {
     li.append(label);
     list.append(li);
     box.addEventListener('change', () => {
-      markers.get(place.id).setStyle({ fillColor: box.checked ? '#ff2e88' : '#c9c3d6', radius: box.checked ? 9 : 7 });
+      mapReady.then((map) => map?.setSelected(place.id, box.checked));
       updateStartButton();
     });
   });
   updateStartButton();
-  fitTo(pickMap, [nearby.center, ...nearby.places.slice(0, 12).map((p) => [p.lat, p.lng])]);
 }
 
 function selectedPlaces() {
@@ -200,9 +231,15 @@ function shareUrl(plan) {
 function renderVote(plan) {
   currentPlan = plan;
   showView('vote');
+  startCrowd(plan);
+  const fakes = crowdAt(crowd.schedule, crowdElapsed());
+  renderCrowdFeed(fakes.happened, plan.places);
+  // What's on screen: real votes from the link plus the simulated friends
+  const shown = { ...plan, votes: addVotes(plan.votes, fakes.votes) };
+  const focusedPlace = document.activeElement?.dataset?.place;
   const myVote = readVote(plan.id);
-  const total = totalVotes(plan.votes);
-  const ranked = rankPlaces(plan);
+  const total = totalVotes(shown.votes);
+  const ranked = rankPlaces(shown);
   const leader = total > 0 ? ranked[0] : null;
   const tie = leader && ranked[1] && ranked[1].votes === leader.votes;
 
@@ -221,6 +258,7 @@ function renderVote(plan) {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'vote-button';
+    button.dataset.place = place.id;
     button.setAttribute('aria-pressed', String(myVote === place.id));
     const name = document.createElement('span');
     name.className = 'place-name';
@@ -237,11 +275,16 @@ function renderVote(plan) {
     list.append(li);
   }
 
-  voteMap ??= makeMap($('vote-map'));
-  clearMarkers(voteMap);
-  youAreHere(voteMap, plan.center);
-  for (const { place, votes } of ranked) barMarker(voteMap, place, votes > 0 && votes === leader?.votes);
-  fitTo(voteMap, plan.places.map((p) => [p.lat, p.lng]));
+  // Re-rendering for a friend's vote mustn't steal keyboard focus
+  if (focusedPlace) list.querySelector(`[data-place="${CSS.escape(focusedPlace)}"]`)?.focus();
+
+  const leaders = new Set(ranked.filter(({ votes }) => votes > 0 && votes === leader?.votes).map(({ place }) => place.id));
+  mapFor($('vote-map')).then((map) => {
+    if (!map || currentPlan !== plan) return;
+    // Fit the view once per plan, so a friend's vote doesn't undo panning
+    map.showPlaces(plan.center, plan.places, leaders, { fit: $('vote-map').fittedPlan !== plan.id });
+    $('vote-map').fittedPlan = plan.id;
+  });
 }
 
 function castVote(placeId) {
@@ -301,13 +344,17 @@ function route() {
   $('vote-status').textContent = '';
   if (!match) {
     currentPlan = null;
+    stopCrowd();
     showView(location.hash.startsWith('#p=') ? 'broken' : 'pick');
-    pickMap?.invalidateSize();
+    $('pick-map').mapPromise?.then((map) => map?.resize());
     return;
   }
   const plan = decodePlan(match[1]);
   if (plan) renderVote(plan);
-  else showView('broken');
+  else {
+    stopCrowd();
+    showView('broken');
+  }
 }
 
 window.addEventListener('hashchange', route);

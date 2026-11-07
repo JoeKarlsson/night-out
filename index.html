@@ -92,6 +92,12 @@
           <div>
             <h2>Tap a bar to vote</h2>
             <ol class="place-list votes" id="vote-list"></ol>
+            <h2 id="crowd-title">Friends voting</h2>
+            <p class="crowd-note">Friends' votes are simulated in this demo. They show up on your screen only and never go into the link.</p>
+            <p class="crowd-waiting" id="crowd-waiting">Waiting for friends to vote…</p>
+            <div role="log" aria-labelledby="crowd-title">
+              <ol class="crowd-feed" id="crowd-feed"></ol>
+            </div>
             <p><a href="#" data-home>Start a new night out</a></p>
           </div>
         </div>
@@ -103,7 +109,7 @@
     </main>
 
     <footer class="site-footer">
-      <p>Votes live in the link and on your phone; there's no account and no server. Bar data comes from <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, looked up through the <a href="https://overpass-api.de/">Overpass API</a>, which sees your approximate location only when you search. Visits are counted with cookie-free <a href="https://plausible.io/privacy-focused-web-analytics">Plausible</a>.</p>
+      <p>Votes live in the link and on your phone; there's no account and no server. Bar data comes from <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, looked up through the <a href="https://overpass-api.de/">Overpass API</a> or, when that's busy, OSM's <a href="https://nominatim.org/">Nominatim</a>; they see your approximate location only when you search. The map comes from <a href="https://openfreemap.org/">OpenFreeMap</a>, which sees the area you're looking at. Visits are counted with cookie-free <a href="https://plausible.io/privacy-focused-web-analytics">Plausible</a>.</p>
       <p>Made by <a href="https://www.joekarlsson.com/">Joe Karlsson</a>, first built with friends in 2015. <a href="https://github.com/JoeKarlsson/night-out">Source on GitHub</a>.</p>
     </footer>
   </body>

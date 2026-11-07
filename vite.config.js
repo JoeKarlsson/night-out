@@ -11,8 +11,10 @@ const base = `${(process.env.BASE_PATH || '').replace(/\/$/, '')}/`;
 const CSP = [
   "default-src 'self'",
   "script-src 'self' https://plausible.joekarlsson.io",
-  "connect-src 'self' https://overpass-api.de https://plausible.joekarlsson.io",
-  "img-src 'self' data: https://tile.openstreetmap.org",
+  "connect-src 'self' https://overpass-api.de https://nominatim.openstreetmap.org https://tiles.openfreemap.org https://plausible.joekarlsson.io",
+  "img-src 'self' data: blob:",
+  // MapLibre parses tiles in a web worker served from this site
+  "worker-src 'self'",
   "style-src 'self'",
   "font-src 'self'",
   "manifest-src 'self'",
@@ -38,6 +40,8 @@ export default defineConfig({
   appType: 'mpa',
   plugins: [cspPlugin],
   build: {
+    // MapLibre is one ~300 KB gzipped chunk, loaded only when a map is shown
+    chunkSizeWarningLimit: 1200,
     rollupOptions: {
       input: { main: resolve(import.meta.dirname, 'index.html'), notFound: resolve(import.meta.dirname, '404.html') },
     },
