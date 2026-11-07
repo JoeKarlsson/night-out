@@ -543,8 +543,9 @@ function route() {
       startAutoplay();
     } else {
       showView('pick');
+      // Redraw on the way back: the map may have gone live, or resized, while hidden
       if (!nearby.places.length) showDefaultBars("Bars in Honolulu's Chinatown, where Night Out began.");
-      $('pick-map').mapPromise?.then((map) => map?.resize());
+      else drawPickMap();
     }
     updateDemoBanner();
     return;

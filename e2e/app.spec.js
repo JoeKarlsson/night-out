@@ -241,6 +241,8 @@ test('the demo plays itself to the vote, and friends vote without touching the l
   // Taking over swaps in the live map
   await expect(page.locator('#pick-map .maplibregl-canvas, #pick-map.map-failed')).toHaveCount(1);
   await expect(page.locator('#pick-map .static-map')).toHaveCount(0);
+  await expect(page.locator('#pick-map .map-dot-bar')).toHaveCount(11);
+  await expect(page.locator('#pick-map .map-dot-you')).toHaveCount(1);
   expect(errors).toEqual([]);
 });
 
