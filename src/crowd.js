@@ -1,14 +1,18 @@
-// Simulated friends for the demo: a few made-up people vote on a plan over
-// the first minute, so the vote page feels alive without a server. Their
+// Simulated friends for the demo: a crowd of made-up people vote on a plan
+// over its first 15-25 seconds, so the vote page feels alive without a server. Their
 // votes are shown on screen only and never written into the share link.
 // The crowd is seeded by the plan id, so a refresh brings back the same people.
 
-export const FRIEND_NAMES = ['Sam', 'Riley', 'Jo', 'Maya', 'Theo', 'Priya', 'Luis', 'Nina', 'Ari', 'Dev', 'Kat', 'Omar'];
-const MIN_FRIENDS = 3;
-const MAX_FRIENDS = 6;
-const FIRST_VOTE_MS = 10_000;
-const LAST_VOTE_MS = 60_000;
-const CHANGE_CHANCE = 0.2;
+export const FRIEND_NAMES = [
+  'Sam', 'Riley', 'Jo', 'Maya', 'Theo', 'Priya', 'Luis', 'Nina', 'Ari', 'Dev',
+  'Kat', 'Omar', 'Bea', 'Finn', 'Lena', 'Marco', 'Tess', 'Yusuf',
+];
+const MIN_FRIENDS = 8;
+const MAX_FRIENDS = 14;
+// The first vote lands 1-2s in, the last somewhere between 15 and 25s
+const FIRST_VOTE_MS = [1_000, 2_000];
+const LAST_VOTE_MS = [15_000, 25_000];
+const CHANGE_CHANCE = 0.12;
 
 /** 32-bit FNV-1a hash of a string. */
 export function seedFrom(text) {
@@ -57,16 +61,19 @@ export function crowdSchedule(plan) {
     return options.findLast((o) => o.weight > 0).id;
   }
 
+  const between = ([low, high]) => low + rng() * (high - low);
+  const first = between(FIRST_VOTE_MS);
+  const last = between(LAST_VOTE_MS);
   const events = [];
-  for (const friend of friends) {
-    const at = Math.round(FIRST_VOTE_MS + rng() * (LAST_VOTE_MS - FIRST_VOTE_MS));
+  friends.forEach((friend, i) => {
+    const at = Math.round(i === 0 ? first : between([first, last]));
     const placeId = pick();
     events.push({ at, friend, placeId, previous: null });
     if (rng() < CHANGE_CHANCE) {
-      const later = Math.round(at + 5_000 + rng() * 10_000);
+      const later = Math.round(at + between([3_000, 8_000]));
       events.push({ at: later, friend, placeId: pick(placeId), previous: placeId });
     }
-  }
+  });
   return events.sort((a, b) => a.at - b.at);
 }
 

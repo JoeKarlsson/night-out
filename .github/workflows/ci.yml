@@ -51,9 +51,16 @@ jobs:
       - run: npm run build
         env:
           BASE_PATH: ${{ steps.pages.outputs.base_path }}
+      # Broken internal and external links in the built pages
+      - uses: lycheeverse/lychee-action@v2.9.0
+        with:
+          args: --no-progress --root-dir "${{ github.workspace }}/dist" --accept 200,206,429 --max-retries 3 'dist/**/*.html'
+          fail: true
       - uses: actions/upload-pages-artifact@v5
         with:
           path: dist
+          # .well-known/security.txt is a hidden folder, left out by default
+          include-hidden-files: true
 
   deploy:
     needs: build
@@ -67,3 +74,21 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v5
+
+  # The deployed site, from outside: catches what only shows up on GitHub Pages
+  live-check:
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pages, redirects and security.txt answer as they should
+        run: |
+          set -euo pipefail
+          site=https://night-out.joekarlsson.com
+          check() { code=$(curl -s -o /dev/null -w '%{http_code}' --retry 5 --retry-all-errors "$1"); echo "$1 $code"; [ "$code" = "$2" ]; }
+          check "$site/" 200
+          check "$site/.well-known/security.txt" 200
+          check "$site/sitemap.xml" 200
+          check "$site/robots.txt" 200
+          check "$site/no-such-page" 404
+          [ "$(curl -s -o /dev/null -w '%{http_code} %{redirect_url}' http://night-out.joekarlsson.com/)" = "301 $site/" ]
+          curl -s "$site/.well-known/security.txt" | grep -q '^Contact:'

@@ -51,8 +51,9 @@
 
     <main id="main" tabindex="-1">
       <h1 id="page-title">Where are we going tonight?</h1>
-      <div class="demo-banner" id="demo-banner" hidden>
-        <p id="demo-banner-text"></p>
+      <!-- The page starts in the autoplay demo's first state, so nothing moves when the script runs -->
+      <div class="demo-banner" id="demo-banner">
+        <p id="demo-banner-text">This demo runs by itself: Night Out picks three real bars in Honolulu, then made-up friends vote. Tap anywhere to take over.</p>
         <button type="button" class="button primary" id="own-plan">Start your own plan</button>
       </div>
       <section id="pick-view" aria-labelledby="page-title">
@@ -62,10 +63,18 @@
           <button type="button" class="button primary" id="locate">Find bars near me</button>
           <button type="button" class="button" id="use-location" hidden>Use my location</button>
         </div>
-        <p class="status" id="pick-status" role="status" aria-live="polite"></p>
+        <p class="status" id="pick-status" role="status" aria-live="polite">Bars in Honolulu's Chinatown, where Night Out began.</p>
 
-        <div class="layout" id="pick-layout" hidden>
-          <div class="map" id="pick-map" role="region" aria-label="Map of bars near you"></div>
+        <div class="layout" id="pick-layout">
+          <!-- The demo's pre-rendered map (npm run demo-map); sizes match DEMO_VIEW in src/default-bars.js -->
+          <div class="map" id="pick-map" role="region" aria-label="Map of bars near you"><div class="static-map">
+            <picture>
+              <source media="(max-width: 599px)" srcset="/demo-map-small.webp 2x" width="600" height="520">
+              <img src="/demo-map-large.webp" srcset="/demo-map-large.webp 2x" width="900" height="720" alt="" fetchpriority="high">
+            </picture>
+            <p class="static-map-credit">© <a href="https://openfreemap.org/">OpenFreeMap</a> <a href="https://www.openmaptiles.org/">OpenMapTiles</a>, data from <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a></p>
+            <div class="static-map-dots"></div>
+          </div></div>
           <form id="pick-form" class="picker">
             <fieldset>
               <legend>Choose two or more bars for the vote</legend>
@@ -113,7 +122,7 @@
     </main>
 
     <footer class="site-footer">
-      <p>Votes live in the link and on your phone; there's no account and no server. Bar data comes from <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, looked up through the <a href="https://overpass-api.de/">Overpass API</a> or, when that's busy, OSM's <a href="https://nominatim.org/">Nominatim</a>; they see your approximate location only when you search. The map comes from <a href="https://openfreemap.org/">OpenFreeMap</a>, which sees the area you're looking at. Visits are counted with cookie-free <a href="https://plausible.io/privacy-focused-web-analytics">Plausible</a>.</p>
+      <p>Votes live in the link and on your phone; there's no account and no server. Bar data comes from <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, looked up through the <a href="https://wiki.openstreetmap.org/wiki/Overpass_API">Overpass API</a> or, when that's busy, OSM's <a href="https://nominatim.org/">Nominatim</a>; they see your approximate location only when you search. The map comes from <a href="https://openfreemap.org/">OpenFreeMap</a>, which sees the area you're looking at. Visits are counted with cookie-free <a href="https://plausible.io/privacy-focused-web-analytics">Plausible</a>.</p>
       <p>Made by <a href="https://www.joekarlsson.com/">Joe Karlsson</a>, first built with friends in 2015. <a href="https://github.com/JoeKarlsson/night-out">Source on GitHub</a>.</p>
     </footer>
   </body>

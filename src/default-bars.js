@@ -7,6 +7,19 @@ import { distanceMeters } from './places.js';
 
 export const DEFAULT_CENTER = [21.3115, -157.8625];
 
+// The autoplay demo picks these three, a few blocks apart
+export const DEMO_PICKS = ['n14190542467', 'n6906469049', 'n6906510131'];
+
+// The pre-rendered map behind the demo (public/demo-map-*.webp, made by
+// `npm run demo-map`): centered between the picks, at a zoom that fits them.
+// Phones get the small image; everything else the large one.
+export const DEMO_VIEW = {
+  center: [21.30999, -157.86298],
+  zoom: 15.5,
+  small: { width: 600, height: 520, maxWidth: 599 },
+  large: { width: 900, height: 720 },
+};
+
 const BARS = [
   {id: "n6312124615", name: "Bar 35", lat: 21.31153, lng: -157.86248, kind: "Bar"},
   {id: "n11677564122", name: "Royal Arcade Bar", lat: 21.31161, lng: -157.86227, kind: "Bar"},

@@ -79,6 +79,11 @@ h1 {
 
 h2 {
   font-size: var(--step-1);
+  margin-top: var(--space-5);
+}
+
+/* A heading that opens its column needs no space above it */
+h2:first-child {
   margin-top: 0;
 }
 
@@ -183,7 +188,10 @@ main:focus {
 .demo-banner p {
   flex: 1 1 30ch;
   margin: 0;
-  max-width: 70ch;
+}
+
+.demo-banner .button {
+  margin-inline-start: auto;
 }
 
 .status {
@@ -250,14 +258,54 @@ main:focus {
   background: var(--moon);
 }
 
-.map .maplibregl-ctrl-attrib {
+.map .maplibregl-ctrl.maplibregl-ctrl-attrib,
+.static-map-credit {
   background: var(--bg);
   color: var(--text);
   font: 0.75rem/1.4 var(--font);
 }
 
-.map .maplibregl-ctrl-attrib a {
+.map .maplibregl-ctrl.maplibregl-ctrl-attrib a,
+.static-map-credit a {
   color: var(--pink-text);
+}
+
+/* The demo's pre-rendered map, centered at its own size so the dots line up */
+.static-map {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  border-radius: var(--radius);
+}
+
+.static-map img {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 900px;
+  height: 720px;
+  max-width: none;
+  transform: translate(-50%, -50%);
+}
+
+@media (max-width: 599px) {
+  .static-map img {
+    width: 600px;
+    height: 520px;
+  }
+}
+
+.static-map-dots .map-dot {
+  position: absolute;
+  transform: translate(-50%, -50%);
+}
+
+.static-map-credit {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  margin: 0;
+  padding: 0.125rem var(--space-2);
 }
 
 .map .maplibregl-ctrl-group {

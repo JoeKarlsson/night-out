@@ -1,6 +1,8 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { decodePlan } from '../src/plan.js';
+import { FRIEND_NAMES } from '../src/crowd.js';
+import { DEMO_VIEW } from '../src/default-bars.js';
 
 const HERE = { latitude: 44.9778, longitude: -93.265 };
 const overpass = {
@@ -66,7 +68,7 @@ test('home page has its metadata and passes axe', async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
-const FRIEND = /^(Sam|Riley|Jo|Maya|Theo|Priya|Luis|Nina|Ari|Dev|Kat|Omar) (voted for|changed their vote to) /;
+const FRIEND = new RegExp(`^(${FRIEND_NAMES.join('|')}) (voted for|changed their vote to) `);
 // Real votes in a share link (simulated friends never go in it)
 const linkVotes = (link) => decodePlan(new URL(link).hash.slice('#p='.length)).votes;
 const voteButton = (page, name) => page.locator('#vote-list').getByRole('button', { name });
@@ -199,14 +201,28 @@ test('the demo plays itself to the vote, and friends vote without touching the l
   await page.goto('./?fast');
   await expect(page.locator('h1')).toHaveText('Vote on tonight');
   await expect(page.locator('#vote-list li')).toHaveCount(3);
+  await expect(page.locator('#vote-list .place-name')).toHaveText(['Black Orchid', 'Black Shamrock Tavern', 'Bar Leather Apron']);
   await expect(page.locator('#demo-banner')).toContainText('This is a demo plan');
+  // Until someone interacts, the demo map is the pre-rendered image, with no map engine loaded
+  await expect(page.locator('#vote-map .static-map img')).toBeVisible();
+  await expect(page.locator('#vote-map .map-dot-bar')).toHaveCount(3);
+  // The image in index.html is the size DEMO_VIEW says, so the dots land on the right streets
+  const img = await page.locator('#vote-map .static-map img').evaluate((el) => ({
+    src: el.currentSrc, natural: [el.naturalWidth, el.naturalHeight], shown: [el.width, el.height], viewport: innerWidth,
+  }));
+  const size = img.viewport <= DEMO_VIEW.small.maxWidth ? DEMO_VIEW.small : DEMO_VIEW.large;
+  expect(img.src).toContain(size === DEMO_VIEW.small ? 'demo-map-small' : 'demo-map-large');
+  // naturalWidth is density-corrected: a 2x image of the right size reports the CSS size
+  expect(img.natural).toEqual([size.width, size.height]);
+  expect(img.shown).toEqual([size.width, size.height]);
+  expect(await page.evaluate(() => performance.getEntriesByType('resource').some((r) => r.name.includes('maplibre-gl')))).toBe(false);
   await expect(page.getByText("Friends' votes are simulated in this demo")).toBeVisible();
   const link = await page.locator('#share-link').inputValue();
 
   // ?fast runs the minute of fake voting in under a second
   const feed = page.getByRole('log');
   await expect(feed.locator('li').first()).toHaveText(FRIEND);
-  await expect(async () => expect(await feed.locator('li').count()).toBeGreaterThanOrEqual(3)).toPass();
+  await expect(async () => expect(await feed.locator('li').count()).toBeGreaterThanOrEqual(8)).toPass();
   await expect(page.locator('#vote-summary')).toContainText('so far');
   await expect(page.locator('#crowd-waiting')).toBeHidden();
   expect(await page.locator('#share-link').inputValue()).toBe(link);
@@ -222,6 +238,9 @@ test('the demo plays itself to the vote, and friends vote without touching the l
   await takeOver(page);
   await expect(page.locator('#demo-banner')).toBeHidden();
   await expect(page.locator('#pick-list input:checked')).toHaveCount(0);
+  // Taking over swaps in the live map
+  await expect(page.locator('#pick-map .maplibregl-canvas, #pick-map.map-failed')).toHaveCount(1);
+  await expect(page.locator('#pick-map .static-map')).toHaveCount(0);
   expect(errors).toEqual([]);
 });
 
@@ -241,6 +260,8 @@ test('with reduced motion the demo jumps straight to the vote', async ({ page })
   await page.goto('./');
   await expect(page.locator('h1')).toHaveText('Vote on tonight', { timeout: 2000 });
   await expect(page.locator('#vote-list li')).toHaveCount(3);
+  // At real speed the first friend votes within about 2 seconds
+  await expect(page.locator('#crowd-feed li').first()).toHaveText(FRIEND, { timeout: 3000 });
 });
 
 test('a shared plan link opens that plan and never autoplays', async ({ page, browser }) => {
@@ -277,6 +298,22 @@ test('votes from forked links merge on one device', async ({ page, browser }) =>
   await page.goto(votes[1]);
   await expect(page.locator('h1')).toHaveText('Vote on tonight');
   expect(Object.values(linkVotes(await page.locator('#share-link').inputValue()))).toEqual([1, 1]);
+});
+
+test('every page puts its h1 in the same place at the same size', async ({ page }) => {
+  await stubNetwork(page);
+  const measure = () => page.locator('h1').evaluate((h1) => ({ top: Math.round(h1.getBoundingClientRect().top), size: getComputedStyle(h1).fontSize }));
+  await page.goto('./');
+  await takeOver(page);
+  const pick = await measure();
+  await page.goto((await demoPlanLink(page)).replace('?fast', ''));
+  await expect(page.locator('h1')).toHaveText('Vote on tonight');
+  const vote = await measure();
+  await page.goto('./#p=garbage');
+  const broken = await measure();
+  await page.goto('./404.html');
+  const notFound = await measure();
+  expect([vote, broken, notFound]).toEqual([pick, pick, pick]);
 });
 
 test('a mangled link says so, and missing pages get the 404', async ({ page }) => {

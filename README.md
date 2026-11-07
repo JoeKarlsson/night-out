@@ -34,9 +34,25 @@ npm run dev        # http://localhost:5173
 npm test           # unit tests (node:test)
 npm run test:e2e   # Playwright: desktop Chrome, Pixel, iPhone WebKit, with axe
 npm run icons      # re-render PNG icons and og.png from public/favicon.svg
+npm run demo-map   # re-render the demo's static map images (needs cwebp)
 ```
 
+Visual baselines (`e2e/visual.spec.js-snapshots/`) are rendered on Linux, so those tests skip on a Mac. To update them after a design change, run them in the Playwright image that matches `@playwright/test`:
+
+```bash
+docker run --rm -v "$PWD":/src:ro -v "$PWD/e2e":/out mcr.microsoft.com/playwright:v1.65.0-noble bash -c '
+  mkdir /work && cd /src && tar --exclude=node_modules --exclude=dist --exclude=.git -cf - . | (cd /work && tar xf -) && cd /work &&
+  npm ci && CI=1 npx playwright test e2e/visual.spec.js --update-snapshots &&
+  rm -rf /out/visual.spec.js-snapshots && cp -r e2e/visual.spec.js-snapshots /out/'
+```
+
+CI runs the unit, e2e, axe and visual tests, checks every link in the built pages with lychee, deploys, then checks the live site from outside (pages, 404, redirect, `security.txt`).
+
 The e2e tests stub the map style, Overpass and Nominatim, so they make no outside requests.
+
+### Why the demo map is a picture
+
+The autoplay demo shows a pre-rendered image of the Honolulu map (`public/demo-map-*.webp`) with the bars drawn on top in CSS, positioned with the same Web Mercator math the map uses. MapLibre is about 300 KB gzipped and its startup blocked a mid-range phone's main thread for over a second and a half; the picture costs 40 to 80 KB. The first click, tap, key or scroll, or any other location, swaps in the live map.
 
 ## Deploy
 

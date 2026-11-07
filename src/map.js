@@ -1,7 +1,7 @@
-// The map: OpenFreeMap's dark vector style drawn by MapLibre GL. Both load
-// only when a map is first shown, so the home page stays light.
+// The live map: OpenFreeMap's "fiord" vector style drawn by MapLibre GL,
+// loaded only when a live map is needed (see static-map.js for the demo's).
 
-export const MAP_STYLE_URL = 'https://tiles.openfreemap.org/styles/dark';
+import { MAP_STYLE_URL } from './map-style.js';
 
 let maplibrePromise;
 function loadMapLibre() {
@@ -50,7 +50,8 @@ export async function createMap(container) {
 
   let markers = new Map();
 
-  function showPlaces(center, places, highlighted = new Set(), { fit = true } = {}) {
+  /** Draw `you` and the places; fit the view to the places (and you, when `withCenter`). */
+  function showPlaces(center, places, highlighted = new Set(), { fit = true, withCenter = true } = {}) {
     for (const m of markers.values()) m.remove();
     markers = new Map();
     const you = new maplibregl.Marker({ element: dot('map-dot-you', 'You') }).setLngLat([center[1], center[0]]).addTo(map);
@@ -60,14 +61,14 @@ export async function createMap(container) {
       markers.set(place.id, new maplibregl.Marker({ element: el }).setLngLat([place.lng, place.lat]).addTo(map));
     }
     if (!fit) return;
-    const points = [center, ...places.slice(0, 12).map((p) => [p.lat, p.lng])];
+    const points = [...(withCenter ? [center] : []), ...places.slice(0, 12).map((p) => [p.lat, p.lng])];
     map.resize();
     if (points.length === 1) {
       map.jumpTo({ center: [center[1], center[0]], zoom: 15 });
     } else {
       const bounds = new maplibregl.LngLatBounds();
       for (const [lat, lng] of points) bounds.extend([lng, lat]);
-      map.fitBounds(bounds, { padding: 40, maxZoom: 16, duration: 0 });
+      map.fitBounds(bounds, { padding: 48, maxZoom: 18, duration: 0 });
     }
   }
 

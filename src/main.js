@@ -1,7 +1,8 @@
 import './style.css';
 import { createPlan, encodePlan, decodePlan, applyVote, rankPlaces, totalVotes, mergeVotes } from './plan.js';
 import { fetchNearbyBars, demoBars, formatDistance } from './places.js';
-import { DEFAULT_CENTER, defaultBars } from './default-bars.js';
+import { DEFAULT_CENTER, DEMO_PICKS, defaultBars } from './default-bars.js';
+import { createStaticMap } from './static-map.js';
 import { createMap } from './map.js';
 import { crowdSchedule, crowdAt, addVotes, describeEvent } from './crowd.js';
 
@@ -16,22 +17,22 @@ let currentPlan = null;
 let voteOrder = { planId: null, ids: [] };
 
 // ---- Simulated friends -----------------------------------------------------
-// Made-up friends vote over the first minute so the page feels live. Their
+// Made-up friends vote over the first 15-25 seconds so the page feels live. Their
 // votes are added on screen only; the share link carries real votes alone.
 // ?fast runs the minute in under a second, for the end-to-end tests.
 const CROWD_SPEED = new URLSearchParams(location.search).has('fast') ? 100 : 1;
 const CROWD_START_KEY = (planId) => `night-out:crowd-start:${planId}`;
 let crowd = null;
 
-function crowdStartTime(planId, headStartMs) {
+function crowdStartTime(planId) {
   try {
     const saved = Number(localStorage.getItem(CROWD_START_KEY(planId)));
     if (saved > 0 && saved <= Date.now()) return saved;
-    const now = Date.now() - headStartMs;
+    const now = Date.now();
     localStorage.setItem(CROWD_START_KEY(planId), String(now));
     return now;
   } catch {
-    return Date.now() - headStartMs;
+    return Date.now();
   }
 }
 
@@ -42,9 +43,7 @@ function crowdElapsed() {
 function startCrowd(plan) {
   if (crowd?.planId === plan.id) return;
   stopCrowd();
-  // The autoplay demo starts its crowd a few seconds in, so votes come soon
-  const headStart = plan.id === demoPlanId ? DEMO_HEAD_START_MS / CROWD_SPEED : 0;
-  crowd = { planId: plan.id, schedule: crowdSchedule(plan), start: crowdStartTime(plan.id, headStart), shown: 0, timer: null };
+  crowd = { planId: plan.id, schedule: crowdSchedule(plan), start: crowdStartTime(plan.id), shown: 0, timer: null };
   $('crowd-feed').replaceChildren();
   scheduleNextCrowdVote();
 }
@@ -82,9 +81,39 @@ function showView(name) {
   $('page-title').textContent = TITLES[name];
 }
 
-// One map per view, made the first time it's needed. If MapLibre can't
+// The Honolulu demo starts on a pre-rendered map; the first click, tap, key
+// or scroll (or any other place) swaps in the live MapLibre map.
+let liveMaps = false;
+
+function isDemoArea(center) {
+  return center[0] === DEFAULT_CENTER[0] && center[1] === DEFAULT_CENTER[1];
+}
+
+/** The map for `el`: the static demo map while it's still fitting, else the live one. */
+function mapFor(el, center) {
+  if (!liveMaps && isDemoArea(center)) {
+    el.staticMap ??= createStaticMap(el);
+    return Promise.resolve(el.staticMap);
+  }
+  // Clear the static map, including the one index.html ships in #pick-map
+  el.staticMap = null;
+  el.querySelector('.static-map')?.remove();
+  return liveMapFor(el);
+}
+
+function goLive() {
+  if (liveMaps) return;
+  liveMaps = true;
+  if (!views.pick.hidden && nearby.places.length) drawPickMap();
+  if (!views.vote.hidden && currentPlan) drawVoteMap(currentPlan, { fit: true });
+}
+for (const type of ['pointerdown', 'keydown', 'wheel', 'touchstart']) {
+  addEventListener(type, goLive, { capture: true, once: true, passive: true });
+}
+
+// One live map per view, made the first time it's needed. If MapLibre can't
 // start (no WebGL), the map box says so and the list still works.
-async function mapFor(el) {
+async function liveMapFor(el) {
   if (!el.mapPromise) {
     el.mapPromise = createMap(el).catch((error) => {
       el.classList.add('map-failed');
@@ -178,15 +207,9 @@ async function searchAt(center) {
 }
 
 function renderPicker() {
-  $('pick-layout').hidden = false;
-
   const list = $('pick-list');
   list.replaceChildren();
-  const shown = nearby;
-  const mapReady = mapFor($('pick-map')).then((map) => {
-    if (map && nearby === shown) map.showPlaces(shown.center, shown.places);
-    return map;
-  });
+  drawPickMap();
   nearby.places.forEach((place) => {
     const li = document.createElement('li');
     const label = document.createElement('label');
@@ -204,11 +227,21 @@ function renderPicker() {
     li.append(label);
     list.append(li);
     box.addEventListener('change', () => {
-      mapReady.then((map) => map?.setSelected(place.id, box.checked));
+      mapFor($('pick-map'), nearby.center).then((map) => map?.setSelected(place.id, box.checked));
       updateStartButton();
     });
   });
   updateStartButton();
+}
+
+/** Draw the pick map from `nearby` and whatever is ticked in the list. */
+function drawPickMap() {
+  const shown = nearby;
+  mapFor($('pick-map'), shown.center).then((map) => {
+    if (!map || nearby !== shown) return;
+    map.showPlaces(shown.center, shown.places);
+    for (const box of $('pick-form').querySelectorAll('input[name=place]:checked')) map.setSelected(box.value, true);
+  });
 }
 
 function selectedPlaces() {
@@ -239,8 +272,7 @@ $('pick-form').addEventListener('submit', (event) => {
 // bars, three get picked, the vote opens and made-up friends vote. Any click,
 // tap or key stops it where it is.
 
-const AUTOPLAY_STEP_MS = 1500 / CROWD_SPEED;
-const DEMO_HEAD_START_MS = 8000;
+const AUTOPLAY_STEP_MS = 900 / CROWD_SPEED;
 let autoplay = null;
 // Remembered for the tab, so a refresh still labels the demo plan as a demo
 const DEMO_PLAN_KEY = 'night-out:demo-plan';
@@ -288,7 +320,7 @@ function startAutoplay() {
   const listeners = new AbortController();
   autoplay = { timers: [], listeners };
   updateDemoBanner();
-  const steps = [...nearby.places.slice(0, 3).map((place) => () => checkPlace(place.id)), () => {
+  const steps = [...DEMO_PICKS.map((id) => () => checkPlace(id)), () => {
     stopAutoplay();
     openDemoPlan();
   }];
@@ -423,11 +455,19 @@ function renderVote(plan) {
   // Re-rendering for a friend's vote mustn't steal keyboard focus
   if (focusedPlace) list.querySelector(`[data-place="${CSS.escape(focusedPlace)}"]`)?.focus();
 
-  const leaders = new Set(ranked.filter(({ votes }) => votes > 0 && votes === leader?.votes).map(({ place }) => place.id));
-  mapFor($('vote-map')).then((map) => {
+  // Fit the view once per plan, so a friend's vote doesn't undo panning
+  drawVoteMap(plan, { fit: $('vote-map').fittedPlan !== plan.id });
+}
+
+function drawVoteMap(plan, { fit }) {
+  const shown = { ...plan, votes: addVotes(plan.votes, crowd ? crowdAt(crowd.schedule, crowdElapsed()).votes : {}) };
+  const ranked = rankPlaces(shown);
+  const top = ranked[0]?.votes ?? 0;
+  const leaders = new Set(ranked.filter(({ votes }) => votes > 0 && votes === top).map(({ place }) => place.id));
+  mapFor($('vote-map'), plan.center).then((map) => {
     if (!map || currentPlan !== plan) return;
-    // Fit the view once per plan, so a friend's vote doesn't undo panning
-    map.showPlaces(plan.center, plan.places, leaders, { fit: $('vote-map').fittedPlan !== plan.id });
+    // The vote map frames the bars being voted on, not where the plan began
+    map.showPlaces(plan.center, plan.places, leaders, { fit, withCenter: false });
     $('vote-map').fittedPlan = plan.id;
   });
 }
