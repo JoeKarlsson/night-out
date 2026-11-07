@@ -89,6 +89,20 @@ export function applyVote(votes, previous, next) {
   return updated;
 }
 
+/**
+ * Combine the votes of two links for the same plan: each bar keeps the higher
+ * count. That recovers votes cast on forked links, but undercounts when two
+ * forks each added a vote for the same bar.
+ */
+export function mergeVotes(a, b) {
+  const merged = { ...a };
+  for (const [id, n] of Object.entries(b)) {
+    if (Number.isInteger(n) && n > 0) merged[id] = Math.min(Math.max(merged[id] || 0, n), MAX_VOTES);
+  }
+  for (const [id, n] of Object.entries(merged)) if (!Number.isInteger(n) || n <= 0) delete merged[id];
+  return merged;
+}
+
 /** Places ordered by votes (most first), ties keep the planner's order. */
 export function rankPlaces(plan) {
   return plan.places

@@ -1,12 +1,10 @@
 import './style.css';
-import { createPlan, encodePlan, decodePlan, applyVote, rankPlaces, totalVotes } from './plan.js';
+import { createPlan, encodePlan, decodePlan, applyVote, rankPlaces, totalVotes, mergeVotes } from './plan.js';
 import { fetchNearbyBars, demoBars, formatDistance } from './places.js';
+import { DEFAULT_CENTER, defaultBars } from './default-bars.js';
 import { createMap } from './map.js';
 import { crowdSchedule, crowdAt, addVotes, describeEvent } from './crowd.js';
 
-// Honolulu's Chinatown, where Night Out was first built: the demo location
-// when someone skips geolocation or says no to it.
-const DEMO_CENTER = [21.3115, -157.8625];
 const VOTE_KEY = (planId) => `night-out:vote:${planId}`;
 
 const $ = (id) => document.getElementById(id);
@@ -15,6 +13,7 @@ const TITLES = { pick: 'Where are we going tonight?', vote: 'Vote on tonight', b
 
 let nearby = { center: null, places: [] };
 let currentPlan = null;
+let voteOrder = { planId: null, ids: [] };
 
 // ---- Simulated friends -----------------------------------------------------
 // Made-up friends vote over the first minute so the page feels live. Their
@@ -24,15 +23,15 @@ const CROWD_SPEED = new URLSearchParams(location.search).has('fast') ? 100 : 1;
 const CROWD_START_KEY = (planId) => `night-out:crowd-start:${planId}`;
 let crowd = null;
 
-function crowdStartTime(planId) {
+function crowdStartTime(planId, headStartMs) {
   try {
     const saved = Number(localStorage.getItem(CROWD_START_KEY(planId)));
     if (saved > 0 && saved <= Date.now()) return saved;
-    const now = Date.now();
+    const now = Date.now() - headStartMs;
     localStorage.setItem(CROWD_START_KEY(planId), String(now));
     return now;
   } catch {
-    return Date.now();
+    return Date.now() - headStartMs;
   }
 }
 
@@ -43,7 +42,9 @@ function crowdElapsed() {
 function startCrowd(plan) {
   if (crowd?.planId === plan.id) return;
   stopCrowd();
-  crowd = { planId: plan.id, schedule: crowdSchedule(plan), start: crowdStartTime(plan.id), shown: 0, timer: null };
+  // The autoplay demo starts its crowd a few seconds in, so votes come soon
+  const headStart = plan.id === demoPlanId ? DEMO_HEAD_START_MS / CROWD_SPEED : 0;
+  crowd = { planId: plan.id, schedule: crowdSchedule(plan), start: crowdStartTime(plan.id, headStart), shown: 0, timer: null };
   $('crowd-feed').replaceChildren();
   scheduleNextCrowdVote();
 }
@@ -97,56 +98,80 @@ async function mapFor(el) {
 
 // ---- Pick view -------------------------------------------------------------
 
+// An unanswered location prompt never times out by itself, so cap the wait
+const LOCATION_WAIT_MS = 5000;
+// Overpass and Nominatim together get this long before the made-up bars show
+const SEARCH_BUDGET_MS = 8000;
+let lateCenter = null;
+
 function setPickStatus(message) {
   $('pick-status').textContent = message;
 }
 
-function getPosition() {
-  return new Promise((resolve, reject) => {
-    if (!('geolocation' in navigator)) return reject(new Error('unsupported'));
-    navigator.geolocation.getCurrentPosition(
-      (pos) => resolve([pos.coords.latitude, pos.coords.longitude]),
-      reject,
-      { enableHighAccuracy: false, timeout: 15000, maximumAge: 300000 },
-    );
-  });
+function showDefaultBars(message) {
+  nearby = { center: DEFAULT_CENTER, places: defaultBars() };
+  setPickStatus(message);
+  renderPicker();
 }
 
-async function findBars(useDemo) {
-  const buttons = $('locate-actions').querySelectorAll('button');
-  buttons.forEach((b) => (b.disabled = true));
-  let center = DEMO_CENTER;
+/** `request` settles whenever the browser answers; `inTime` rejects after `ms`. */
+function getPosition(ms) {
+  const request = new Promise((resolve, reject) => {
+    if (!('geolocation' in navigator)) return reject(new Error('unsupported'));
+    navigator.geolocation.getCurrentPosition((pos) => resolve([pos.coords.latitude, pos.coords.longitude]), reject, {
+      enableHighAccuracy: false,
+      maximumAge: 300000,
+    });
+  });
+  const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('no answer')), ms));
+  return { request, inTime: Promise.race([request, timeout]) };
+}
+
+async function findBarsNearMe() {
+  $('locate').disabled = true;
+  $('use-location').hidden = true;
+  setPickStatus('Finding you…');
+  const { request, inTime } = getPosition(LOCATION_WAIT_MS);
+  let center;
+  try {
+    center = await inTime;
+  } catch {
+    showDefaultBars("Couldn't get your location, so here are real bars in Honolulu's Chinatown instead.");
+    // If the location turns up later, offer it rather than moving the map
+    request.then(
+      (late) => {
+        lateCenter = late;
+        $('use-location').hidden = false;
+      },
+      () => {},
+    );
+    $('locate').disabled = false;
+    return;
+  }
+  await searchAt(center);
+  $('locate').disabled = false;
+}
+
+async function searchAt(center) {
+  setPickStatus('Looking for bars nearby…');
+  // Say something while a slow search runs, so it never looks stuck
+  const slow = setTimeout(() => setPickStatus('Still looking. OpenStreetMap is slow right now…'), 3000);
   let places;
   try {
-    if (useDemo) {
-      places = demoBars(center);
-      setPickStatus('Showing made-up demo bars in Honolulu, where Night Out began.');
-    } else {
-      setPickStatus('Finding you…');
-      try {
-        center = await getPosition();
-      } catch {
-        places = demoBars(center);
-        setPickStatus("Couldn't get your location, so here are made-up demo bars in Honolulu instead.");
-      }
-      if (!places) {
-        setPickStatus('Looking for bars nearby…');
-        try {
-          places = await fetchNearbyBars(center);
-          setPickStatus(
-            places.length
-              ? `Found ${places.length} bars within a mile and a half.`
-              : 'No bars found within a mile and a half. Here are made-up demo bars to try it with.',
-          );
-          if (!places.length) places = demoBars(center);
-        } catch {
-          places = demoBars(center);
-          setPickStatus("OpenStreetMap's bar search isn't answering right now, so these are made-up demo bars, not real ones. Try again in a few minutes.");
-        }
-      }
-    }
+    places = await fetchNearbyBars(center, { signal: AbortSignal.timeout(SEARCH_BUDGET_MS) });
+    setPickStatus(
+      places.length
+        ? `Found ${places.length} bars within a mile and a half.`
+        : 'No bars found within a mile and a half. Here are made-up demo bars to try it with.',
+    );
+    if (!places.length) places = demoBars(center);
+  } catch {
+    places = demoBars(center);
+    setPickStatus(
+      "OpenStreetMap's bar search isn't answering right now, so these are made-up demo bars, not real ones. Tap Find bars near me to try again.",
+    );
   } finally {
-    buttons.forEach((b) => (b.disabled = false));
+    clearTimeout(slow);
   }
   nearby = { center, places };
   renderPicker();
@@ -198,12 +223,106 @@ function updateStartButton() {
   start.textContent = count < 2 ? 'Pick at least two bars' : `Start the vote with ${count} bars`;
 }
 
-$('locate').addEventListener('click', () => findBars(false));
-$('demo').addEventListener('click', () => findBars(true));
+$('locate').addEventListener('click', findBarsNearMe);
+$('use-location').addEventListener('click', () => {
+  $('use-location').hidden = true;
+  searchAt(lateCenter);
+});
 $('pick-form').addEventListener('submit', (event) => {
   event.preventDefault();
   const plan = createPlan(nearby.center, selectedPlaces());
   location.hash = `p=${encodePlan(plan)}`;
+});
+
+// ---- Autoplay demo ---------------------------------------------------------
+// With no plan in the URL, the page plays the demo by itself: real Honolulu
+// bars, three get picked, the vote opens and made-up friends vote. Any click,
+// tap or key stops it where it is.
+
+const AUTOPLAY_STEP_MS = 1500 / CROWD_SPEED;
+const DEMO_HEAD_START_MS = 8000;
+let autoplay = null;
+// Remembered for the tab, so a refresh still labels the demo plan as a demo
+const DEMO_PLAN_KEY = 'night-out:demo-plan';
+let demoPlanId = readDemoPlanId();
+
+function readDemoPlanId() {
+  try {
+    return sessionStorage.getItem(DEMO_PLAN_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function updateDemoBanner() {
+  const onDemo = autoplay || (currentPlan && currentPlan.id === demoPlanId);
+  $('demo-banner').hidden = !onDemo;
+  $('demo-banner-text').textContent = autoplay
+    ? 'This demo runs by itself: Night Out picks three real bars in Honolulu, then made-up friends vote. Tap anywhere to take over.'
+    : 'This is a demo plan. The bars are real; the friends voting are made up.';
+}
+
+function checkPlace(id) {
+  const box = $('pick-form').querySelector(`input[value="${CSS.escape(id)}"]`);
+  if (!box || box.checked) return;
+  box.checked = true;
+  box.dispatchEvent(new Event('change'));
+}
+
+function openDemoPlan() {
+  const plan = createPlan(nearby.center, selectedPlaces());
+  demoPlanId = plan.id;
+  try {
+    sessionStorage.setItem(DEMO_PLAN_KEY, plan.id);
+  } catch {
+    // The banner still shows until a refresh
+  }
+  // replaceState: the demo shouldn't leave a trail in the back button
+  history.replaceState(null, '', `${location.pathname}${location.search}#p=${encodePlan(plan)}`);
+  route();
+}
+
+function startAutoplay() {
+  showView('pick');
+  showDefaultBars("Bars in Honolulu's Chinatown, where Night Out began.");
+  const listeners = new AbortController();
+  autoplay = { timers: [], listeners };
+  updateDemoBanner();
+  const steps = [...nearby.places.slice(0, 3).map((place) => () => checkPlace(place.id)), () => {
+    stopAutoplay();
+    openDemoPlan();
+  }];
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    steps.forEach((step) => step());
+    return;
+  }
+  steps.forEach((step, i) => autoplay.timers.push(setTimeout(step, AUTOPLAY_STEP_MS * (i + 1))));
+  // The banner's own button handles itself; anything else stops the demo
+  const takeOver = (event) => {
+    if (!$('demo-banner').contains(event.target)) stopAutoplay();
+  };
+  for (const type of ['pointerdown', 'keydown', 'wheel']) {
+    addEventListener(type, takeOver, { capture: true, signal: listeners.signal });
+  }
+}
+
+function stopAutoplay() {
+  if (!autoplay) return;
+  autoplay.timers.forEach(clearTimeout);
+  autoplay.listeners.abort();
+  autoplay = null;
+  updateDemoBanner();
+}
+
+$('own-plan').addEventListener('click', () => {
+  stopAutoplay();
+  history.pushState(null, '', `${location.pathname}${location.search}`);
+  route();
+  $('pick-form').querySelectorAll('input[name=place]:checked').forEach((box) => {
+    box.checked = false;
+    box.dispatchEvent(new Event('change'));
+  });
+  setPickStatus("Bars in Honolulu's Chinatown are below. Tap Find bars near me to plan a night where you are.");
 });
 
 // ---- Vote view -------------------------------------------------------------
@@ -213,6 +332,26 @@ function readVote(planId) {
     return localStorage.getItem(VOTE_KEY(planId));
   } catch {
     return null;
+  }
+}
+
+// Votes from every link for a plan that this device has opened, merged, so
+// friends' links that forked don't each lose the others' votes
+const TALLY_KEY = (planId) => `night-out:tally:${planId}`;
+
+function readTally(planId) {
+  try {
+    return JSON.parse(localStorage.getItem(TALLY_KEY(planId))) ?? {};
+  } catch {
+    return {};
+  }
+}
+
+function saveTally(planId, votes) {
+  try {
+    localStorage.setItem(TALLY_KEY(planId), JSON.stringify(votes));
+  } catch {
+    // Private mode: the link's own votes still show
   }
 }
 
@@ -237,6 +376,7 @@ function renderVote(plan) {
   // What's on screen: real votes from the link plus the simulated friends
   const shown = { ...plan, votes: addVotes(plan.votes, fakes.votes) };
   const focusedPlace = document.activeElement?.dataset?.place;
+  updateDemoBanner();
   const myVote = readVote(plan.id);
   const total = totalVotes(shown.votes);
   const ranked = rankPlaces(shown);
@@ -251,9 +391,14 @@ function renderVote(plan) {
         : `${total} ${total === 1 ? 'vote' : 'votes'} so far. ${leader.place.name} is winning.`;
   $('share-link').value = shareUrl(plan);
 
+  // Rank once when the vote opens; after that rows stay put, so a vote
+  // (yours or a friend's) never moves a button under your thumb
+  if (voteOrder.planId !== plan.id) voteOrder = { planId: plan.id, ids: ranked.map(({ place }) => place.id) };
+  const byId = new Map(ranked.map((row) => [row.place.id, row]));
+
   const list = $('vote-list');
   list.replaceChildren();
-  for (const { place, votes } of ranked) {
+  for (const { place, votes } of voteOrder.ids.map((id) => byId.get(id))) {
     const li = document.createElement('li');
     const button = document.createElement('button');
     button.type = 'button';
@@ -295,6 +440,7 @@ function castVote(placeId) {
   }
   const plan = { ...currentPlan, votes: applyVote(currentPlan.votes, previous, placeId) };
   saveVote(plan.id, placeId);
+  saveTally(plan.id, plan.votes);
   // replaceState: changing a vote shouldn't fill the back button with links
   history.replaceState(null, '', `#p=${encodePlan(plan)}`);
   renderVote(plan);
@@ -339,22 +485,44 @@ for (const link of document.querySelectorAll('[data-home]')) {
   });
 }
 
+let firstRoute = true;
+
 function route() {
+  const isFirstRoute = firstRoute;
+  firstRoute = false;
+  if (!isFirstRoute) stopAutoplay();
   const match = location.hash.match(/^#p=([A-Za-z0-9_-]+)$/);
   $('vote-status').textContent = '';
   if (!match) {
     currentPlan = null;
     stopCrowd();
-    showView(location.hash.startsWith('#p=') ? 'broken' : 'pick');
-    $('pick-map').mapPromise?.then((map) => map?.resize());
+    if (location.hash.startsWith('#p=')) {
+      showView('broken');
+    } else if (isFirstRoute) {
+      // A bare visit plays the demo; a shared link never does
+      startAutoplay();
+    } else {
+      showView('pick');
+      if (!nearby.places.length) showDefaultBars("Bars in Honolulu's Chinatown, where Night Out began.");
+      $('pick-map').mapPromise?.then((map) => map?.resize());
+    }
+    updateDemoBanner();
     return;
   }
   const plan = decodePlan(match[1]);
-  if (plan) renderVote(plan);
-  else {
+  if (!plan) {
     stopCrowd();
     showView('broken');
+    updateDemoBanner();
+    return;
   }
+  const merged = mergeVotes(readTally(plan.id), plan.votes);
+  saveTally(plan.id, merged);
+  const withTally = { ...plan, votes: merged };
+  if (totalVotes(merged) !== totalVotes(plan.votes)) {
+    history.replaceState(null, '', `${location.pathname}${location.search}#p=${encodePlan(withTally)}`);
+  }
+  renderVote(withTally);
 }
 
 window.addEventListener('hashchange', route);

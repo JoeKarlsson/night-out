@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { decodePlan } from '../src/plan.js';
 
 const HERE = { latitude: 44.9778, longitude: -93.265 };
 const overpass = {
@@ -65,6 +66,24 @@ test('home page has its metadata and passes axe', async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
+const FRIEND = /^(Sam|Riley|Jo|Maya|Theo|Priya|Luis|Nina|Ari|Dev|Kat|Omar) (voted for|changed their vote to) /;
+// Real votes in a share link (simulated friends never go in it)
+const linkVotes = (link) => decodePlan(new URL(link).hash.slice('#p='.length)).votes;
+const voteButton = (page, name) => page.locator('#vote-list').getByRole('button', { name });
+
+// The demo autoplays on a bare visit; "Start your own plan" takes over
+async function takeOver(page) {
+  await page.getByRole('button', { name: 'Start your own plan' }).click();
+  await expect(page.locator('h1')).toHaveText('Where are we going tonight?');
+}
+
+// A plan link made by the fast autoplay, with ?fast dropped
+async function demoPlanLink(page) {
+  await page.goto('./?fast');
+  await expect(page.locator('h1')).toHaveText('Vote on tonight');
+  return page.locator('#share-link').inputValue();
+}
+
 test('find bars, start a vote, vote, change the vote and share the link', async ({ page, context, browserName }) => {
   const { errors, failed } = await stubNetwork(page);
   await context.setGeolocation(HERE);
@@ -84,18 +103,22 @@ test('find bars, start a vote, vote, change the vote and share the link', async 
   await start.click();
 
   await expect(page.locator('h1')).toHaveText('Vote on tonight');
-  await expect(page.locator('#vote-summary')).toHaveText('2 bars, no votes yet.');
+  await expect(page.locator('#demo-banner')).toBeHidden();
   await axe(page);
   await expectNoSideScroll(page);
 
-  await page.getByRole('button', { name: /Mock Brewing/ }).click();
-  await expect(page.locator('#vote-summary')).toContainText('Mock Brewing is winning');
-  await page.getByRole('button', { name: /Test Tavern/ }).click();
-  await expect(page.locator('#vote-summary')).toContainText('1 vote so far. Test Tavern is winning');
+  const order = await page.locator('#vote-list .place-name').allTextContents();
+  await voteButton(page, /Mock Brewing/).click();
+  await expect(voteButton(page, /Mock Brewing/)).toContainText('yours');
+  await voteButton(page, /Test Tavern/).click();
+  await expect(voteButton(page, /Test Tavern/)).toContainText('yours');
+  // Voting doesn't reorder the rows
+  expect(await page.locator('#vote-list .place-name').allTextContents()).toEqual(order);
 
   // A friend opens the shared link on another phone and votes too
   const link = await page.locator('#share-link').inputValue();
-  expect(link).toContain('#p=');
+  const tavern = Object.keys(linkVotes(link))[0];
+  expect(linkVotes(link)).toEqual({ [tavern]: 1 });
   if (browserName === 'chromium') {
     await page.getByRole('button', { name: 'Copy link' }).click();
     expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(link);
@@ -103,12 +126,38 @@ test('find bars, start a vote, vote, change the vote and share the link', async 
   const friend = await context.browser().newPage();
   await stubNetwork(friend);
   await friend.goto(link);
-  await friend.getByRole('button', { name: /Test Tavern/ }).click();
-  await expect(friend.locator('#vote-summary')).toContainText('2 votes so far. Test Tavern is winning');
+  await voteButton(friend, /Test Tavern/).click();
+  await expect(voteButton(friend, /Test Tavern/)).toContainText('yours');
+  expect(linkVotes(await friend.locator('#share-link').inputValue())).toEqual({ [tavern]: 2 });
   await friend.close();
 
   expect(errors).toEqual([]);
   expect(failed).toEqual([]);
+});
+
+test('a location that never comes falls back to Honolulu bars, then offers it when it arrives', async ({ page }) => {
+  await stubNetwork(page);
+  // A location prompt nobody answers: getCurrentPosition never calls back
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'geolocation', {
+      value: {
+        getCurrentPosition(ok) {
+          window.answerLocation = (latitude, longitude) => ok({ coords: { latitude, longitude } });
+        },
+      },
+    });
+  });
+  await page.goto('./');
+  await takeOver(page);
+  await page.getByRole('button', { name: 'Find bars near me' }).click();
+  await expect(page.locator('#pick-status')).toHaveText('Finding you…');
+  await expect(page.locator('#pick-status')).toContainText("real bars in Honolulu's Chinatown", { timeout: 6000 });
+  await expect(page.getByLabel(/Bar 35/)).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Use my location' })).toBeHidden();
+
+  await page.evaluate(() => window.answerLocation(44.9778, -93.265));
+  await page.getByRole('button', { name: 'Use my location' }).click();
+  await expect(page.locator('#pick-status')).toContainText('Found 3 bars');
 });
 
 test('Overpass down falls back to Nominatim, and the map draws', async ({ page, context }) => {
@@ -128,7 +177,7 @@ test('Overpass down falls back to Nominatim, and the map draws', async ({ page, 
   expect(errors.filter((e) => !e.includes('status of 502'))).toEqual([]);
 });
 
-test('Overpass and Nominatim down, or location refused, falls back to demo bars', async ({ page, context }) => {
+test('Overpass and Nominatim down shows made-up bars; a refused location shows Honolulu', async ({ page, context }) => {
   await stubNetwork(page, { overpassStatus: 429, nominatimStatus: 503 });
   await context.setGeolocation(HERE);
   await context.grantPermissions(['geolocation']);
@@ -141,40 +190,93 @@ test('Overpass and Nominatim down, or location refused, falls back to demo bars'
   await page.goto('./');
   // No geolocation permission granted: the browser refuses
   await page.getByRole('button', { name: 'Find bars near me' }).click();
-  await expect(page.locator('#pick-status')).toContainText('demo bars');
-  await expect(page.locator('#pick-list li')).toHaveCount(8);
-
-  await page.getByRole('button', { name: 'Try it with demo bars' }).click();
-  await expect(page.locator('#pick-status')).toContainText('Honolulu');
+  await expect(page.locator('#pick-status')).toContainText("real bars in Honolulu's Chinatown");
+  await expect(page.getByLabel(/Bar 35/)).toBeVisible();
 });
 
-test('simulated friends vote over time without changing the share link', async ({ page }) => {
+test('the demo plays itself to the vote, and friends vote without touching the link', async ({ page }) => {
   const { errors } = await stubNetwork(page);
   await page.goto('./?fast');
-  await page.getByRole('button', { name: 'Try it with demo bars' }).click();
-  await page.getByLabel(/The Last Call/).check();
-  await page.getByLabel(/Corner Booth/).check();
-  await page.locator('#start').click();
+  await expect(page.locator('h1')).toHaveText('Vote on tonight');
+  await expect(page.locator('#vote-list li')).toHaveCount(3);
+  await expect(page.locator('#demo-banner')).toContainText('This is a demo plan');
   await expect(page.getByText("Friends' votes are simulated in this demo")).toBeVisible();
   const link = await page.locator('#share-link').inputValue();
 
   // ?fast runs the minute of fake voting in under a second
   const feed = page.getByRole('log');
-  await expect(feed.locator('li').first()).toHaveText(/^(Sam|Riley|Jo|Maya|Theo|Priya|Luis|Nina|Ari|Dev|Kat|Omar) voted for (The Last Call|Corner Booth)$/);
+  await expect(feed.locator('li').first()).toHaveText(FRIEND);
   await expect(async () => expect(await feed.locator('li').count()).toBeGreaterThanOrEqual(3)).toPass();
   await expect(page.locator('#vote-summary')).toContainText('so far');
   await expect(page.locator('#crowd-waiting')).toBeHidden();
   expect(await page.locator('#share-link').inputValue()).toBe(link);
+  expect(linkVotes(link)).toEqual({});
 
   // A refresh brings back the same crowd
-  const before = await feed.locator('li').allTextContents();
   await page.waitForTimeout(1500);
   const settled = await feed.locator('li').allTextContents();
   await page.reload();
   await expect(feed.locator('li')).toHaveText(settled);
-  expect(settled.slice(0, before.length)).toEqual(before);
   await axe(page);
+
+  await takeOver(page);
+  await expect(page.locator('#demo-banner')).toBeHidden();
+  await expect(page.locator('#pick-list input:checked')).toHaveCount(0);
   expect(errors).toEqual([]);
+});
+
+test('a tap stops the demo where it is', async ({ page }) => {
+  await stubNetwork(page);
+  await page.goto('./');
+  await expect(page.locator('#demo-banner')).toContainText('Tap anywhere to take over');
+  await page.locator('.lede').first().click();
+  await expect(page.locator('#demo-banner')).toBeHidden();
+  await page.waitForTimeout(6500);
+  await expect(page.locator('h1')).toHaveText('Where are we going tonight?');
+});
+
+test('with reduced motion the demo jumps straight to the vote', async ({ page }) => {
+  await stubNetwork(page);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('./');
+  await expect(page.locator('h1')).toHaveText('Vote on tonight', { timeout: 2000 });
+  await expect(page.locator('#vote-list li')).toHaveCount(3);
+});
+
+test('a shared plan link opens that plan and never autoplays', async ({ page, browser }) => {
+  await stubNetwork(page);
+  const link = (await demoPlanLink(page)).replace('?fast', '');
+  const other = await browser.newPage();
+  await stubNetwork(other);
+  await other.goto(link);
+  await expect(other.locator('h1')).toHaveText('Vote on tonight');
+  await expect(other.locator('#demo-banner')).toBeHidden();
+  await other.waitForTimeout(2000);
+  expect(new URL(other.url()).hash).toBe(new URL(link).hash);
+  await other.close();
+});
+
+test('votes from forked links merge on one device', async ({ page, browser }) => {
+  await stubNetwork(page);
+  const base = (await demoPlanLink(page)).replace('?fast', '');
+  const names = await page.locator('#vote-list .place-name').allTextContents();
+
+  // Two friends vote on the same original link, on their own phones
+  const votes = [];
+  for (const name of names.slice(0, 2)) {
+    const phone = await browser.newPage();
+    await stubNetwork(phone);
+    await phone.goto(base);
+    await voteButton(phone, name).click();
+    await expect(voteButton(phone, name)).toContainText('yours');
+    votes.push(await phone.locator('#share-link').inputValue());
+    await phone.close();
+  }
+  // This device opens both forks and ends up with both votes
+  await page.goto(votes[0]);
+  await page.goto(votes[1]);
+  await expect(page.locator('h1')).toHaveText('Vote on tonight');
+  expect(Object.values(linkVotes(await page.locator('#share-link').inputValue()))).toEqual([1, 1]);
 });
 
 test('a mangled link says so, and missing pages get the 404', async ({ page }) => {
@@ -194,8 +296,10 @@ for (const width of [320, 390]) {
   test(`no sideways scroll at ${width}px`, async ({ page }) => {
     await stubNetwork(page);
     await page.setViewportSize({ width, height: 800 });
-    await page.goto('./');
-    await page.getByRole('button', { name: 'Try it with demo bars' }).click();
+    await page.goto('./?fast');
+    await expect(page.locator('h1')).toHaveText('Vote on tonight');
+    await expectNoSideScroll(page);
+    await takeOver(page);
     await expectNoSideScroll(page);
   });
 }
@@ -205,7 +309,7 @@ test('content stays in the centered column at 2560px', async ({ page }, info) =>
   await stubNetwork(page);
   await page.setViewportSize({ width: 2560, height: 1400 });
   await page.goto('./');
-  await page.getByRole('button', { name: 'Try it with demo bars' }).click();
+  await takeOver(page);
   const box = await page.locator('#pick-view').boundingBox();
   expect(box.x).toBeGreaterThanOrEqual((2560 - 1440) / 2 - 1);
   expect(box.x + box.width).toBeLessThanOrEqual((2560 + 1440) / 2 + 1);

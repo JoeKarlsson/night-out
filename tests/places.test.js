@@ -93,3 +93,11 @@ test('distance and formatting', () => {
   assert.equal(formatDistance(30), '100 ft');
   assert.equal(formatDistance(2000), '1.2 mi');
 });
+
+test('fetchNearbyBars stops when the overall signal runs out', async () => {
+  const controller = new AbortController();
+  const fake = fakeFetch({ overpass: 502, nominatim: () => [] });
+  const wait = async () => controller.abort(new Error('out of time'));
+  await assert.rejects(fetchNearbyBars(center, { ...fake, wait, signal: controller.signal }), AggregateError);
+  assert.deepEqual(fake.calls, ['overpass query', 'bar']);
+});

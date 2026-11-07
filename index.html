@@ -15,7 +15,7 @@
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="Night Out">
     <meta property="og:url" content="https://night-out.joekarlsson.com/">
-    <meta property="og:title" content="Night Out">
+    <meta property="og:title" content="Night Out: vote with friends on where to go tonight">
     <meta property="og:description" content="Pick a few bars near you, send your friends the link, and let everyone vote on where you're going tonight.">
     <meta property="og:image" content="https://night-out.joekarlsson.com/og.png">
     <meta property="og:image:width" content="1200">
@@ -25,7 +25,7 @@
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:site" content="@joekarlsson1">
     <meta name="twitter:creator" content="@joekarlsson1">
-    <meta name="twitter:title" content="Night Out">
+    <meta name="twitter:title" content="Night Out: vote with friends on where to go tonight">
     <meta name="twitter:description" content="Pick a few bars near you, send your friends the link, and let everyone vote on where you're going tonight.">
     <meta name="twitter:image" content="https://night-out.joekarlsson.com/og.png">
     <meta name="twitter:image:alt" content="The Night Out logo, a yellow crescent moon with pink vote bars, on a dark night sky">
@@ -51,12 +51,16 @@
 
     <main id="main" tabindex="-1">
       <h1 id="page-title">Where are we going tonight?</h1>
+      <div class="demo-banner" id="demo-banner" hidden>
+        <p id="demo-banner-text"></p>
+        <button type="button" class="button primary" id="own-plan">Start your own plan</button>
+      </div>
       <section id="pick-view" aria-labelledby="page-title">
         <p class="lede">Pick a few bars near you, send your friends the link, and let everyone vote.</p>
 
         <div class="actions" id="locate-actions">
           <button type="button" class="button primary" id="locate">Find bars near me</button>
-          <button type="button" class="button" id="demo">Try it with demo bars</button>
+          <button type="button" class="button" id="use-location" hidden>Use my location</button>
         </div>
         <p class="status" id="pick-status" role="status" aria-live="polite"></p>
 

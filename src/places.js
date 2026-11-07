@@ -6,8 +6,8 @@ export const OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
 export const NOMINATIM_URL = 'https://nominatim.openstreetmap.org/search';
 export const SEARCH_RADIUS_METERS = 2600;
 const MAX_RESULTS = 30;
-const OVERPASS_TIMEOUT_MS = 6000;
-const NOMINATIM_TIMEOUT_MS = 8000;
+const OVERPASS_TIMEOUT_MS = 3500;
+const NOMINATIM_TIMEOUT_MS = 3000;
 // Nominatim's usage policy allows one request a second
 const NOMINATIM_GAP_MS = 1100;
 const NOMINATIM_PHRASES = ['bar', 'pub', 'brewery'];
@@ -71,23 +71,25 @@ export function parseNominatim(results, center, seen = new Set()) {
   return places;
 }
 
-async function getJson(fetchImpl, url, init, timeoutMs) {
-  const response = await fetchImpl(url, { ...init, signal: AbortSignal.timeout(timeoutMs) });
+async function getJson(fetchImpl, url, init, timeoutMs, signal) {
+  const timeout = AbortSignal.timeout(timeoutMs);
+  const response = await fetchImpl(url, { ...init, signal: signal ? AbortSignal.any([signal, timeout]) : timeout });
   if (!response.ok) throw new Error(`${new URL(url).host} answered ${response.status}`);
   return response.json();
 }
 
-export async function fetchFromOverpass(center, { fetchImpl = fetch } = {}) {
+export async function fetchFromOverpass(center, { fetchImpl = fetch, signal } = {}) {
   const body = new URLSearchParams({ data: overpassQuery(center[0], center[1]) });
-  return parseOverpass(await getJson(fetchImpl, OVERPASS_URL, { method: 'POST', body }, OVERPASS_TIMEOUT_MS), center);
+  return parseOverpass(await getJson(fetchImpl, OVERPASS_URL, { method: 'POST', body }, OVERPASS_TIMEOUT_MS, signal), center);
 }
 
-export async function fetchFromNominatim(center, { fetchImpl = fetch, wait = sleep } = {}) {
+export async function fetchFromNominatim(center, { fetchImpl = fetch, wait = sleep, signal } = {}) {
   const seen = new Set();
   const places = [];
   for (const [i, phrase] of NOMINATIM_PHRASES.entries()) {
     if (i > 0) await wait(NOMINATIM_GAP_MS);
-    places.push(...parseNominatim(await getJson(fetchImpl, nominatimUrl(phrase, center), {}, NOMINATIM_TIMEOUT_MS), center, seen));
+    signal?.throwIfAborted();
+    places.push(...parseNominatim(await getJson(fetchImpl, nominatimUrl(phrase, center), {}, NOMINATIM_TIMEOUT_MS, signal), center, seen));
   }
   return places.sort((a, b) => a.distance - b.distance).slice(0, MAX_RESULTS);
 }
@@ -95,17 +97,19 @@ export async function fetchFromNominatim(center, { fetchImpl = fetch, wait = sle
 /**
  * Real bars near `center`: Overpass first, Nominatim if Overpass fails.
  * An empty answer is an answer; only errors move on to the next source.
- * Throws an AggregateError when both fail.
+ * Throws an AggregateError when both fail. `signal` caps the whole search.
  */
 export async function fetchNearbyBars(center, options = {}) {
   const errors = [];
   for (const source of [fetchFromOverpass, fetchFromNominatim]) {
+    if (options.signal?.aborted) break;
     try {
       return await source(center, options);
     } catch (error) {
       errors.push(error);
     }
   }
+  if (options.signal?.aborted) errors.push(options.signal.reason);
   throw new AggregateError(errors, 'No OpenStreetMap search answered');
 }
 

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createPlan, encodePlan, decodePlan, applyVote, rankPlaces, totalVotes, MAX_PLACES } from '../src/plan.js';
+import { createPlan, encodePlan, decodePlan, applyVote, rankPlaces, totalVotes, mergeVotes, MAX_PLACES } from '../src/plan.js';
 
 const places = [
   { id: 'n1', name: 'Café Ümlaut 🍺', lat: 21.312345678, lng: -157.86, kind: 'Bar' },
@@ -52,4 +52,11 @@ test('rankPlaces puts the most votes first and keeps ties in order', () => {
   plan.votes = { n3: 2, w2: 2 };
   assert.deepEqual(rankPlaces(plan).map((r) => r.place.id), ['w2', 'n3', 'n1']);
   assert.equal(totalVotes(plan.votes), 4);
+});
+
+test('mergeVotes keeps the higher count per bar and drops junk', () => {
+  assert.deepEqual(mergeVotes({ a: 1 }, { b: 1 }), { a: 1, b: 1 });
+  assert.deepEqual(mergeVotes({ a: 2, b: 1 }, { a: 1, b: 3 }), { a: 2, b: 3 });
+  assert.deepEqual(mergeVotes({ a: 'x', c: -1 }, { b: 1.5, d: 2 }), { d: 2 });
+  assert.deepEqual(mergeVotes({}, {}), {});
 });
