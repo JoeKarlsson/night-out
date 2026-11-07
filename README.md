@@ -37,12 +37,12 @@ npm run icons      # re-render PNG icons and og.png from public/favicon.svg
 npm run demo-map   # re-render the demo's static map images (needs cwebp)
 ```
 
-Visual baselines (`e2e/visual.spec.js-snapshots/`) are rendered on Linux, so those tests skip on a Mac. To update them after a design change, run them in the Playwright image that matches `@playwright/test`:
+Visual baselines (`e2e/visual.spec.js-snapshots/`) depend on the installed fonts, so those tests run only in the Playwright image that matches `@playwright/test` (CI's `visual` job uses the same image) and skip elsewhere. To update them after a design change:
 
 ```bash
 docker run --rm -v "$PWD":/src:ro -v "$PWD/e2e":/out mcr.microsoft.com/playwright:v1.65.0-noble bash -c '
   mkdir /work && cd /src && tar --exclude=node_modules --exclude=dist --exclude=.git -cf - . | (cd /work && tar xf -) && cd /work &&
-  npm ci && CI=1 npx playwright test e2e/visual.spec.js --update-snapshots &&
+  npm ci && CI=1 VISUAL=1 npx playwright test e2e/visual.spec.js --update-snapshots &&
   rm -rf /out/visual.spec.js-snapshots && cp -r e2e/visual.spec.js-snapshots /out/'
 ```
 

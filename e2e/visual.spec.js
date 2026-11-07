@@ -1,9 +1,9 @@
 import { test, expect } from '@playwright/test';
 
-// Visual baselines for the parts that don't change between runs. They are
-// rendered on Linux (CI, or the Playwright Docker image locally: see README),
-// so they only run there.
-test.skip(process.platform !== 'linux', 'Baselines are rendered on Linux');
+// Visual baselines for the parts that don't change between runs. Fonts decide
+// the pixels, so they run only in the pinned Playwright image (VISUAL=1): the
+// CI "visual" job, or locally with the Docker command in the README.
+test.skip(!process.env.VISUAL, 'Runs in the Playwright image only (VISUAL=1)');
 
 const STYLE = { version: 8, sources: {}, layers: [{ id: 'bg', type: 'background', paint: { 'background-color': '#45516e' } }] };
 const shot = { animations: 'disabled', maxDiffPixelRatio: 0.01 };
