@@ -2,9 +2,9 @@
 
 ![Night Out's demo playing itself: three real bars in Honolulu's Chinatown get picked on a dark map, the vote opens with a share link, and made-up friends vote until Black Shamrock Tavern is winning](.github/readme/2026-11-recording.gif)
 
-Pick a few bars near you, send your friends the link, and let everyone vote on
-where you're going tonight. There's no server and no account: the bars and every
-vote live in the link.
+Night Out is for the part of the evening where the group text goes in circles
+about where to go. Pick a few bars, send your friends the link, and everyone
+votes. The whole plan lives in the link.
 
 [Try it at night-out.joekarlsson.com](https://night-out.joekarlsson.com)
 
