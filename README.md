@@ -1,12 +1,12 @@
 # Night Out
 
-Pick a few bars near you, send your friends the link, and let everyone vote on
-where you're going tonight. This repo is the whole app: a static site built
-with Vite and MapLibre, with no server. It's live at
-[night-out.joekarlsson.com](https://night-out.joekarlsson.com), and there's more
-about it on [its page on joekarlsson.com](https://www.joekarlsson.com/work/night-out/).
-
 ![Night Out's demo playing itself: three real bars in Honolulu's Chinatown get picked on a dark map, the vote opens with a share link, and made-up friends vote until Black Shamrock Tavern is winning](.github/readme/2026-11-recording.gif)
+
+Pick a few bars near you, send your friends the link, and let everyone vote on
+where you're going tonight. There's no server and no account: the bars and every
+vote live in the link.
+
+[Try it at night-out.joekarlsson.com](https://night-out.joekarlsson.com)
 
 ## Quick start
 
