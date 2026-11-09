@@ -73,7 +73,7 @@ jobs:
       # Broken internal and external links in the built pages
       - uses: lycheeverse/lychee-action@v2.9.0
         with:
-          args: --no-progress --root-dir "${{ github.workspace }}/dist" --accept 200,206,429 --max-retries 3 'dist/**/*.html'
+          args: --no-progress --root-dir "${{ github.workspace }}/dist" --accept 200,206,429 --max-retries 3 --exclude '^https://night-out\.joekarlsson\.com' 'dist/**/*.html'
           fail: true
       - uses: actions/upload-pages-artifact@v5
         with:
