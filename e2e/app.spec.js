@@ -318,6 +318,15 @@ test('every page puts its h1 in the same place at the same size', async ({ page 
   expect([vote, broken, notFound]).toEqual([pick, pick, pick]);
 });
 
+test('the about page tells the story and is linked from the footer', async ({ page }) => {
+  await stubNetwork(page);
+  await page.goto('./');
+  await page.locator('.site-footer').getByRole('link', { name: 'About Night Out' }).click();
+  await expect(page.locator('h1')).toHaveText('About Night Out');
+  await expect(page.locator('main')).toContainText('the whole plan and its votes live in the link');
+  await axe(page);
+});
+
 test('a mangled link says so, and missing pages get the 404', async ({ page }) => {
   await stubNetwork(page);
   await page.goto('./#p=garbage');

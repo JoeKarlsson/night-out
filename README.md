@@ -4,6 +4,16 @@ Pick a few bars near you, send your friends the link, and let everyone vote on w
 
 Live at https://night-out.joekarlsson.com
 
+More about it, with how it works, on [its page on joekarlsson.com](https://www.joekarlsson.com/work/night-out/).
+
+![Night Out's demo playing itself: three real bars in Honolulu's Chinatown get picked on a dark map, the vote opens with a share link, and made-up friends vote until Black Shamrock Tavern is winning](.github/readme/2026-11-recording.gif)
+
+What Night Out looked like in November 2026, recorded for [its page on joekarlsson.com](https://www.joekarlsson.com/work/night-out/). The full-quality video is [2026-11-recording.mp4](.github/readme/2026-11-recording.mp4).
+
+![Night Out on "Where are we going tonight?": a dark map of downtown Honolulu with bars marked in pink, next to a list where The Last Call, Moonlight Tap Room and Pink Flamingo Lounge are checked](.github/readme/2026-11-pick.webp)
+
+![The Night Out vote page: "Vote on tonight, 3 bars, no votes yet", a share link with a Copy link button, a map of downtown Honolulu, and The Last Call, Moonlight Tap Room and Pink Flamingo Lounge each at 0 votes](.github/readme/2026-11-vote.webp)
+
 ## How it works
 
 Open the site with no plan in the link and the demo plays itself: real bars in Honolulu's Chinatown (where Night Out began, from an OpenStreetMap snapshot in `src/default-bars.js`), three get picked a second and a half apart, the vote opens and made-up friends start voting. A banner says it's a demo. Any click, tap or key stops it where it is, and **Start your own plan** clears it. With reduced motion on, it skips straight to the vote. A shared plan link never autoplays.
@@ -18,7 +28,7 @@ That means two friends voting on the same old link at the same time will each en
 
 ### Simulated friends
 
-So the vote page feels live without a server, three to six made-up friends vote over the first minute after a plan opens (starting a few seconds in for the autoplay demo), and now and then one changes their mind. The page says so: "Friends' votes are simulated in this demo." Their votes are added on screen only and never go into the share link. The crowd is seeded by the plan's id, so a refresh brings back the same people at the same times. Add `?fast` to the URL to run the minute in under a second (the e2e tests use it).
+So the vote page feels live without a server, eight to fourteen made-up friends vote over the first 15 to 25 seconds after a plan opens (starting a few seconds in for the autoplay demo), and now and then one changes their mind. The page says so: "Friends' votes are simulated in this demo." Their votes are added on screen only and never go into the share link. The crowd is seeded by the plan's id, so a refresh brings back the same people at the same times. Add `?fast` to the URL to run the crowd 100 times faster (the e2e tests use it).
 
 ### When things fail
 

@@ -486,6 +486,10 @@ legend {
   }
 }
 
+.about p {
+  max-width: 70ch;
+}
+
 .site-footer {
   padding-block: var(--space-5);
   background: var(--surface);

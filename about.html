@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+    <meta name="color-scheme" content="only dark">
+    <meta name="darkreader-lock">
+    <title>About Night Out</title>
+    <meta name="description" content="How Night Out started as a 2015 Meteor app and became a static site where the whole plan and its votes live in the link.">
+    <link rel="canonical" href="https://night-out.joekarlsson.com/about.html">
+    <meta name="author" content="Joe Karlsson">
+    <meta name="theme-color" content="#14111c">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="icon" href="/favicon-32x32.png" sizes="32x32" type="image/png">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <script type="module" src="/src/about.js"></script>
+    <script src="/analytics.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="site-header">
+      <a class="brand" href="%BASE_URL%">
+        <img src="/favicon.svg" alt="" width="40" height="40">
+        <span>Night Out</span>
+      </a>
+    </header>
+    <main id="main" tabindex="-1" class="about">
+      <h1>About Night Out</h1>
+      <p>Night Out is for the part of the evening where the group text goes in circles about where to go. I built the first version in Meteor at the end of October 2015 with Jessie Copeland, Alex Anich, Brian "Boots" and Nolan "Skinny Fatman".</p>
+      <p>That version found your location, asked Google Places for the bars and breweries nearby, and let you check off the ones you'd actually go to. Clicking Start your night out gave you a link to send everyone, and Meteor pushed each vote to everyone with the link as it came in.</p>
+      <p>The Heroku app died years ago. In November 2026 I rebuilt it as a static site at night-out.joekarlsson.com. Bars now come from OpenStreetMap, and there's no server, so the whole plan and its votes live in the link. When you vote, the link on your screen updates and you send the new one back to the group. If two people vote on the same old link at once, the plan splits in two. A phone that opens both links merges them, but a bar they both voted for only counts once, which is the trade for not running a server.</p>
+      <p>If you're not near any bars, or you don't want to share your location, Try it with demo bars fills the map with made-up bars in Honolulu, where it started.</p>
+      <h2>How it's made</h2>
+      <p>Bars come from OpenStreetMap within 2.6 kilometers of you. The bars you pick and every vote are packed into the link after the #, so the link is the whole plan, and each vote page ranks the bars by votes.</p>
+      <p>More about it on <a href="https://www.joekarlsson.com/work/night-out/">its page on joekarlsson.com</a>.</p>
+      <p><a class="button primary" href="%BASE_URL%">Plan a night out</a></p>
+    </main>
+    <footer class="site-footer">
+      <p>Made by <a href="https://www.joekarlsson.com/">Joe Karlsson</a>, first built with friends in 2015. <a href="https://github.com/JoeKarlsson/night-out">Source on GitHub</a>.</p>
+    </footer>
+  </body>
+</html>

@@ -56,7 +56,7 @@ export default defineConfig({
     // MapLibre is one ~300 KB gzipped chunk, loaded only when a map is shown
     chunkSizeWarningLimit: 1200,
     rollupOptions: {
-      input: { main: resolve(import.meta.dirname, 'index.html'), notFound: resolve(import.meta.dirname, '404.html') },
+      input: { main: resolve(import.meta.dirname, 'index.html'), about: resolve(import.meta.dirname, 'about.html'), notFound: resolve(import.meta.dirname, '404.html') },
     },
   },
 });
