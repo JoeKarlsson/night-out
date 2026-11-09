@@ -1,53 +1,54 @@
 # Night Out
 
-Pick a few bars near you, send your friends the link, and let everyone vote on where you're going tonight.
-
-Live at https://night-out.joekarlsson.com
-
-More about it, with how it works, on [its page on joekarlsson.com](https://www.joekarlsson.com/work/night-out/).
+Pick a few bars near you, send your friends the link, and let everyone vote on
+where you're going tonight. This repo is the whole app: a static site built
+with Vite and MapLibre, with no server. It's live at
+[night-out.joekarlsson.com](https://night-out.joekarlsson.com), and there's more
+about it on [its page on joekarlsson.com](https://www.joekarlsson.com/work/night-out/).
 
 ![Night Out's demo playing itself: three real bars in Honolulu's Chinatown get picked on a dark map, the vote opens with a share link, and made-up friends vote until Black Shamrock Tavern is winning](.github/readme/2026-11-recording.gif)
 
-What Night Out looked like in November 2026, recorded for [its page on joekarlsson.com](https://www.joekarlsson.com/work/night-out/). The full-quality video is [2026-11-recording.mp4](.github/readme/2026-11-recording.mp4).
+## Quick start
 
-![Night Out on "Where are we going tonight?": a dark map of downtown Honolulu with bars marked in pink, next to a list where The Last Call, Moonlight Tap Room and Pink Flamingo Lounge are checked](.github/readme/2026-11-pick.webp)
+Node.js 20 or newer.
 
-![The Night Out vote page: "Vote on tonight, 3 bars, no votes yet", a share link with a Copy link button, a map of downtown Honolulu, and The Last Call, Moonlight Tap Room and Pink Flamingo Lounge each at 0 votes](.github/readme/2026-11-vote.webp)
+```bash
+git clone https://github.com/JoeKarlsson/night-out.git
+cd night-out
+npm install
+npm run dev        # http://localhost:5173
+```
+
+With no plan in the link, a demo plays itself; any click, tap or key stops it.
 
 ## How it works
 
-Open the site with no plan in the link and the demo plays itself: real bars in Honolulu's Chinatown (where Night Out began, from an OpenStreetMap snapshot in `src/default-bars.js`), three get picked a second and a half apart, the vote opens and made-up friends start voting. A banner says it's a demo. Any click, tap or key stops it where it is, and **Start your own plan** clears it. With reduced motion on, it skips straight to the vote. A shared plan link never autoplays.
+- The whole plan, votes included, is encoded in the link (`#p=…`). Voting
+  updates the link and you send the new one back to the group. Each phone keeps
+  its own vote in `localStorage`, and merges every link it opens for a plan, but
+  if two forks both added a vote for the same bar, the merge counts one.
+- Bars come from OpenStreetMap through the Overpass API, falling back to
+  Nominatim, then to made-up demo bars. The Honolulu demo bars are a snapshot
+  in `src/default-bars.js`.
+- The friends voting on the vote page are simulated, on screen only, and never
+  go into the link. Add `?fast` to the URL to run them 100 times faster.
+- The autoplay demo shows a pre-rendered map (`public/demo-map-*.webp`)
+  instead of loading MapLibre, which is about 300 KB gzipped. The first
+  interaction swaps in the live map.
 
-1. **Find bars near me** asks for your location (waiting at most 5 seconds; if the answer doesn't come, it shows the Honolulu bars and offers **Use my location** if your location turns up later) and looks up bars, pubs, beer gardens and breweries within about a mile and a half, using [OpenStreetMap](https://www.openstreetmap.org/copyright) data through the public [Overpass API](https://overpass-api.de/), or OSM's [Nominatim](https://nominatim.org/) search when Overpass is down or slow (it often is). The map is [OpenFreeMap](https://openfreemap.org/)'s dark style drawn with [MapLibre GL JS](https://maplibre.org/), loaded only when a map is first shown. **Try it with demo bars** skips the location prompt.
-2. Tick two or more and start the vote.
-3. Send the link. Friends tap a bar to vote.
-
-There's no server. The whole plan, votes included, is encoded in the link (`#p=…`). When someone votes, the link on their screen updates; they send that new link back to the group, and the next person votes on top of it. Each phone remembers its own vote in `localStorage`, so changing your mind moves your vote instead of adding one.
-
-That means two friends voting on the same old link at the same time will each end up with a link that has only their own vote. Each device keeps a tally per plan and merges every link for that plan it opens (each bar keeps its highest count), which recovers votes from forked links once someone opens both. It's a partial fix: when two forks each added a vote for the same bar, the merge counts one, and nobody sees the merged count until a link carrying it reaches them. That's the trade for running on a static host; the 2015 version used Meteor and MongoDB for live voting.
-
-### Simulated friends
-
-So the vote page feels live without a server, eight to fourteen made-up friends vote over the first 15 to 25 seconds after a plan opens (starting a few seconds in for the autoplay demo), and now and then one changes their mind. The page says so: "Friends' votes are simulated in this demo." Their votes are added on screen only and never go into the share link. The crowd is seeded by the plan's id, so a refresh brings back the same people at the same times. Add `?fast` to the URL to run the crowd 100 times faster (the e2e tests use it).
-
-### When things fail
-
-The whole bar search gets 8 seconds. After 3 the status says it's still looking.
-
-If both Overpass and Nominatim fail, Overpass finds nothing, or location is refused, the app shows a list of made-up demo bars (labeled as such) so the flow still works.
-
-## Develop
+## Development
 
 ```bash
-npm install
-npm run dev        # http://localhost:5173
 npm test           # unit tests (node:test)
 npm run test:e2e   # Playwright: desktop Chrome, Pixel, iPhone WebKit, with axe
 npm run icons      # re-render PNG icons and og.png from public/favicon.svg
 npm run demo-map   # re-render the demo's static map images (needs cwebp)
 ```
 
-Visual baselines (`e2e/visual.spec.js-snapshots/`) depend on the installed fonts, so those tests run only in the Playwright image that matches `@playwright/test` (CI's `visual` job uses the same image) and skip elsewhere. To update them after a design change:
+The e2e tests stub the map style, Overpass and Nominatim, so they make no
+outside requests. Visual baselines depend on installed fonts, so they only run
+in the Playwright image that matches `@playwright/test`. To update them after a
+design change:
 
 ```bash
 docker run --rm -v "$PWD":/src:ro -v "$PWD/e2e":/out mcr.microsoft.com/playwright:v1.65.0-noble bash -c '
@@ -56,24 +57,16 @@ docker run --rm -v "$PWD":/src:ro -v "$PWD/e2e":/out mcr.microsoft.com/playwrigh
   rm -rf /out/visual.spec.js-snapshots && cp -r e2e/visual.spec.js-snapshots /out/'
 ```
 
-CI runs the unit, e2e, axe and visual tests, checks every link in the built pages with lychee, deploys, then checks the live site from outside (pages, 404, redirect, `security.txt`).
-
-The e2e tests stub the map style, Overpass and Nominatim, so they make no outside requests.
-
-### Why the demo map is a picture
-
-The autoplay demo shows a pre-rendered image of the Honolulu map (`public/demo-map-*.webp`) with the bars drawn on top in CSS, positioned with the same Web Mercator math the map uses. MapLibre is about 300 KB gzipped and its startup blocked a mid-range phone's main thread for over a second and a half; the picture costs 40 to 80 KB. The first click, tap, key or scroll, or any other location, swaps in the live map.
-
-## Deploy
-
-Pushing to `master` runs the tests, builds with Vite and deploys to GitHub Pages (`.github/workflows/ci.yml`). The custom domain is set in the repo's Pages settings; the workflow passes the Pages base path to the build, so the site also works under `/night-out/` if the domain is ever removed.
-
-## Privacy
-
-Your approximate location is sent to Overpass (or Nominatim) only when you tap **Find bars near me**. Map tiles come from tiles.openfreemap.org, which sees the area you're looking at. Visits are counted with cookie-free, self-hosted Plausible. No accounts, nothing stored on a server.
+Pushing to `master` runs the tests, builds with Vite and deploys to GitHub
+Pages (`.github/workflows/ci.yml`), then checks the live site.
 
 ## Credits
 
-First built in 2015 by Joe Karlsson, Jessie Copeland, Alex Anich, Brian "Boots" and Nolan "Skinny Fatman". Rebuilt as a static site in 2026.
+First built in 2015 by Joe Karlsson, Jessie Copeland, Alex Anich, Brian
+"Boots" and Nolan "Skinny Fatman", and rebuilt as a static site in 2026. Map
+data © OpenStreetMap contributors, ODbL. Map tiles from OpenFreeMap, built on
+OpenMapTiles.
 
-Map data © OpenStreetMap contributors, ODbL. Map tiles from OpenFreeMap, built on OpenMapTiles.
+## License
+
+MIT. See [LICENSE](LICENSE).
