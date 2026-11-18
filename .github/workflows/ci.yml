@@ -64,7 +64,7 @@ jobs:
           node-version: '22'
           cache: 'npm'
       - id: pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v6
       - run: npm ci
       # "" with the custom domain, "/night-out" without it
       - run: npm run build
