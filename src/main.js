@@ -166,7 +166,7 @@ async function findBarsNearMe() {
   try {
     center = await inTime;
   } catch {
-    window.plausible('Find Bars', { props: { result: 'no_location' } });
+    window.plausible?.('Find Bars', { props: { result: 'no_location' } });
     showDefaultBars("Couldn't get your location, so here are real bars in Honolulu's Chinatown instead.");
     // If the location turns up later, offer it rather than moving the map
     request.then(
@@ -207,7 +207,7 @@ async function searchAt(center) {
   } finally {
     clearTimeout(slow);
   }
-  window.plausible('Find Bars', { props: { result } });
+  window.plausible?.('Find Bars', { props: { result } });
   nearby = { center, places };
   renderPicker();
 }
@@ -270,7 +270,7 @@ $('use-location').addEventListener('click', () => {
 $('pick-form').addEventListener('submit', (event) => {
   event.preventDefault();
   const plan = createPlan(nearby.center, selectedPlaces());
-  window.plausible('Plan Created', { props: { bars: plan.places.length } });
+  window.plausible?.('Plan Created', { props: { bars: plan.places.length } });
   location.hash = `p=${encodePlan(plan)}`;
 });
 
@@ -340,7 +340,7 @@ function startAutoplay() {
   const takeOver = (event) => {
     if ($('demo-banner').contains(event.target)) return;
     stopAutoplay();
-    window.plausible('Demo Takeover');
+    window.plausible?.('Demo Takeover');
   };
   for (const type of ['pointerdown', 'keydown', 'wheel']) {
     addEventListener(type, takeOver, { capture: true, signal: listeners.signal });
@@ -495,7 +495,7 @@ function castVote(placeId) {
   renderVote(plan);
   const name = plan.places.find((p) => p.id === placeId).name;
   $('vote-status').textContent = `Voted for ${name}. Copy the new link and send it to the group.`;
-  window.plausible('Vote');
+  window.plausible?.('Vote');
 }
 
 $('copy').addEventListener('click', async () => {
@@ -507,14 +507,14 @@ $('copy').addEventListener('click', async () => {
     input.select();
     $('vote-status').textContent = 'Select the link and copy it.';
   }
-  window.plausible('Share', { props: { method: 'copy' } });
+  window.plausible?.('Share', { props: { method: 'copy' } });
 });
 
 if (navigator.share) {
   $('native-share').hidden = false;
   $('native-share').addEventListener('click', () => {
     navigator.share({ title: 'Night Out', text: 'Vote on where we go tonight', url: $('share-link').value }).then(
-      () => window.plausible('Share', { props: { method: 'native' } }),
+      () => window.plausible?.('Share', { props: { method: 'native' } }),
       (error) => {
         // Closing the share sheet rejects with AbortError; anything else is a real failure
         if (error.name !== 'AbortError') throw error;
@@ -575,7 +575,7 @@ function route() {
   }
   if (openedPlanId !== plan.id) {
     openedPlanId = plan.id;
-    window.plausible('Plan Opened', { props: { demo: plan.id === demoPlanId } });
+    window.plausible?.('Plan Opened', { props: { demo: plan.id === demoPlanId } });
   }
   const merged = mergeVotes(readTally(plan.id), plan.votes);
   saveTally(plan.id, merged);
