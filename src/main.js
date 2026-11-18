@@ -118,7 +118,8 @@ async function liveMapFor(el) {
     el.mapPromise = createMap(el).catch((error) => {
       el.classList.add('map-failed');
       el.textContent = "The map couldn't load in this browser. The list below has every bar.";
-      window.plausible?.('JS Error', { props: { message: `map: ${error.message}` } });
+      // Through the page's error handler, so it counts as this page's one JS Error
+      reportError(new Error(`map: ${error.message}`, { cause: error }));
       return null;
     });
   }
@@ -165,6 +166,7 @@ async function findBarsNearMe() {
   try {
     center = await inTime;
   } catch {
+    window.plausible('Find Bars', { props: { result: 'no_location' } });
     showDefaultBars("Couldn't get your location, so here are real bars in Honolulu's Chinatown instead.");
     // If the location turns up later, offer it rather than moving the map
     request.then(
@@ -186,8 +188,10 @@ async function searchAt(center) {
   // Say something while a slow search runs, so it never looks stuck
   const slow = setTimeout(() => setPickStatus('Still looking. OpenStreetMap is slow right now…'), 3000);
   let places;
+  let result;
   try {
     places = await fetchNearbyBars(center, { signal: AbortSignal.timeout(SEARCH_BUDGET_MS) });
+    result = places.length ? 'found' : 'none';
     setPickStatus(
       places.length
         ? `Found ${places.length} bars within a mile and a half.`
@@ -195,6 +199,7 @@ async function searchAt(center) {
     );
     if (!places.length) places = demoBars(center);
   } catch {
+    result = 'fallback';
     places = demoBars(center);
     setPickStatus(
       "OpenStreetMap's bar search isn't answering right now, so these are made-up demo bars, not real ones. Tap Find bars near me to try again.",
@@ -202,6 +207,7 @@ async function searchAt(center) {
   } finally {
     clearTimeout(slow);
   }
+  window.plausible('Find Bars', { props: { result } });
   nearby = { center, places };
   renderPicker();
 }
@@ -264,6 +270,7 @@ $('use-location').addEventListener('click', () => {
 $('pick-form').addEventListener('submit', (event) => {
   event.preventDefault();
   const plan = createPlan(nearby.center, selectedPlaces());
+  window.plausible('Plan Created', { props: { bars: plan.places.length } });
   location.hash = `p=${encodePlan(plan)}`;
 });
 
@@ -331,7 +338,9 @@ function startAutoplay() {
   steps.forEach((step, i) => autoplay.timers.push(setTimeout(step, AUTOPLAY_STEP_MS * (i + 1))));
   // The banner's own button handles itself; anything else stops the demo
   const takeOver = (event) => {
-    if (!$('demo-banner').contains(event.target)) stopAutoplay();
+    if ($('demo-banner').contains(event.target)) return;
+    stopAutoplay();
+    window.plausible('Demo Takeover');
   };
   for (const type of ['pointerdown', 'keydown', 'wheel']) {
     addEventListener(type, takeOver, { capture: true, signal: listeners.signal });
@@ -486,7 +495,7 @@ function castVote(placeId) {
   renderVote(plan);
   const name = plan.places.find((p) => p.id === placeId).name;
   $('vote-status').textContent = `Voted for ${name}. Copy the new link and send it to the group.`;
-  window.plausible?.('Vote');
+  window.plausible('Vote');
 }
 
 $('copy').addEventListener('click', async () => {
@@ -498,14 +507,19 @@ $('copy').addEventListener('click', async () => {
     input.select();
     $('vote-status').textContent = 'Select the link and copy it.';
   }
-  window.plausible?.('Copy Link');
+  window.plausible('Share', { props: { method: 'copy' } });
 });
 
 if (navigator.share) {
   $('native-share').hidden = false;
   $('native-share').addEventListener('click', () => {
-    navigator.share({ title: 'Night Out', text: 'Vote on where we go tonight', url: $('share-link').value }).catch(() => {});
-    window.plausible?.('Share');
+    navigator.share({ title: 'Night Out', text: 'Vote on where we go tonight', url: $('share-link').value }).then(
+      () => window.plausible('Share', { props: { method: 'native' } }),
+      (error) => {
+        // Closing the share sheet rejects with AbortError; anything else is a real failure
+        if (error.name !== 'AbortError') throw error;
+      },
+    );
   });
 }
 
@@ -526,6 +540,8 @@ for (const link of document.querySelectorAll('[data-home]')) {
 }
 
 let firstRoute = true;
+// Plan Opened counts each plan once per page, not every re-route (a vote, back and forward)
+let openedPlanId = null;
 
 function route() {
   const isFirstRoute = firstRoute;
@@ -556,6 +572,10 @@ function route() {
     showView('broken');
     updateDemoBanner();
     return;
+  }
+  if (openedPlanId !== plan.id) {
+    openedPlanId = plan.id;
+    window.plausible('Plan Opened', { props: { demo: plan.id === demoPlanId } });
   }
   const merged = mergeVotes(readTally(plan.id), plan.votes);
   saveTally(plan.id, merged);

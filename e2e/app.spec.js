@@ -50,6 +50,13 @@ async function axe(page) {
   expect(results.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target).join(', ')}`)).toEqual([]);
 }
 
+// The Find Bars results queued for Plausible (the stub queues them; the real script is skipped in tests)
+function findBarsResults(page) {
+  return page.evaluate(() =>
+    (window.plausible.q ?? []).filter(([name]) => name === 'Find Bars').map(([, { props }]) => props.result),
+  );
+}
+
 test('home page has its metadata and passes axe', async ({ page }) => {
   const { errors } = await stubNetwork(page);
   await page.goto('./');
@@ -187,6 +194,7 @@ test('Overpass and Nominatim down shows made-up bars; a refused location shows H
   await page.getByRole('button', { name: 'Find bars near me' }).click();
   await expect(page.locator('#pick-status')).toContainText('made-up demo bars, not real ones');
   await expect(page.locator('#pick-list li')).toHaveCount(8);
+  expect(await findBarsResults(page)).toEqual(['fallback']);
 
   await context.clearPermissions();
   await page.goto('./');
@@ -194,6 +202,7 @@ test('Overpass and Nominatim down shows made-up bars; a refused location shows H
   await page.getByRole('button', { name: 'Find bars near me' }).click();
   await expect(page.locator('#pick-status')).toContainText("real bars in Honolulu's Chinatown");
   await expect(page.getByLabel(/Bar 35/)).toBeVisible();
+  expect(await findBarsResults(page)).toEqual(['no_location']);
 });
 
 test('the demo plays itself to the vote, and friends vote without touching the link', async ({ page }) => {
