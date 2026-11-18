@@ -38,7 +38,7 @@ jobs:
   # Playwright image the baselines were rendered in (see README)
   visual:
     runs-on: ubuntu-latest
-    container: mcr.microsoft.com/playwright:v1.65.0-noble
+    container: mcr.microsoft.com/playwright:v1.65.1-noble
     env:
       VISUAL: '1'
       HOME: /root

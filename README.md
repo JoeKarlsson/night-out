@@ -51,7 +51,7 @@ in the Playwright image that matches `@playwright/test`. To update them after a
 design change:
 
 ```bash
-docker run --rm -v "$PWD":/src:ro -v "$PWD/e2e":/out mcr.microsoft.com/playwright:v1.65.0-noble bash -c '
+docker run --rm -v "$PWD":/src:ro -v "$PWD/e2e":/out mcr.microsoft.com/playwright:v1.65.1-noble bash -c '
   mkdir /work && cd /src && tar --exclude=node_modules --exclude=dist --exclude=.git -cf - . | (cd /work && tar xf -) && cd /work &&
   npm ci && CI=1 VISUAL=1 npx playwright test e2e/visual.spec.js --update-snapshots &&
   rm -rf /out/visual.spec.js-snapshots && cp -r e2e/visual.spec.js-snapshots /out/'
